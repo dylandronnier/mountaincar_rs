@@ -13,15 +13,15 @@ pub struct MountainCar<T: Ground> {
     pub ground: T,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum MountainAction {
     Left = -1,
     Right = 1,
     DoNothing = 0,
 }
 
-pub const MOTOR_POWER: f32 = 0.2;
-pub const FRICTION: f32 = 0.5;
+pub const MOTOR_POWER: f32 = 0.1;
+pub const FRICTION: f32 = 0.4;
 pub const GRAVITY: f32 = 0.1;
 
 impl<T> MountainCar<T>
@@ -50,7 +50,7 @@ impl<T: Ground> mdp::Mdp for MountainCar<T> {
         &mut self,
         a: Self::Action,
         time_step: f32,
-    ) -> Result<f32, mdp::UndefinedAction<Self::Action>> {
+    ) -> Result<f32, mdp::NotAllowed<Self::Action>> {
         let slope = self.ground.slope(self.pos);
         self.speed +=
             time_step * (a as i8 as f32 * MOTOR_POWER - slope * GRAVITY - self.speed * FRICTION);

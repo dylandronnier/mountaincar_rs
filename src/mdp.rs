@@ -1,30 +1,26 @@
-use std::fmt;
+use std::fmt::{self, Debug};
 
 #[derive(Debug, Clone)]
-pub struct UndefinedAction<A>
+pub struct NotAllowed<A>
 where
     A: fmt::Debug,
 {
     pub a: A,
 }
 
-impl<A> fmt::Display for UndefinedAction<A>
+impl<A> fmt::Display for NotAllowed<A>
 where
     A: fmt::Display + fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Action {} is not permitted in the current state.",
-            self.a
-        )
+        write!(f, "Action {} is not allowed in the current state.", self.a)
     }
 }
 
 pub trait Mdp {
-    type Action;
+    type Action: Debug + PartialEq;
     fn reset(&mut self);
-    fn step(&mut self, a: Self::Action, t: f32) -> Result<f32, UndefinedAction<Self::Action>>
+    fn step(&mut self, a: Self::Action, t: f32) -> Result<f32, NotAllowed<Self::Action>>
     where
         <Self as Mdp>::Action: fmt::Debug;
     fn is_finished(&self) -> bool;
@@ -35,7 +31,7 @@ where
     T: Mdp,
 {
     fn policy(&self, s: &T) -> T::Action;
-    fn play_game(&self, e: &mut T) -> Result<f32, UndefinedAction<T::Action>>
+    fn play_game(&self, e: &mut T) -> Result<f32, NotAllowed<T::Action>>
     where
         <T as Mdp>::Action: fmt::Debug,
     {

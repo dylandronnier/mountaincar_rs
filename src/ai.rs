@@ -12,7 +12,7 @@ struct Nn {
 }
 
 impl Nn {
-    fn new(vs: candle_nn::VarBuilder) -> candle_core::error::Result<Self> {
+    pub fn new(vs: candle_nn::VarBuilder) -> candle_core::error::Result<Self> {
         let layer1 = candle_nn::linear(2, 4, vs.pp("ln1"))?;
         let layer2 = candle_nn::linear(4, 8, vs.pp("ln2"))?;
         let layer3 = candle_nn::linear(8, 4, vs.pp("ln3"))?;
@@ -25,7 +25,7 @@ impl Nn {
         })
     }
 
-    fn forward(&self, xs: &candle_core::Tensor) -> candle_core::error::Result<Tensor> {
+    pub fn forward(&self, xs: &candle_core::Tensor) -> candle_core::error::Result<Tensor> {
         let xs = self.ln1.forward(xs)?;
         let xs = xs.relu()?;
         let xs = self.ln2.forward(&xs)?;
@@ -73,28 +73,22 @@ fn sarsa<T: mountaincar::Ground>(
     nb_steps: usize,
 ) -> candle_core::error::Result<()> {
     let mut eps = 0.02;
-    let mut score = 0.0;
     let mut reward: f64;
-    let v = 0.0;
-    for i in 0..nb_steps {
+    let q_previous = 0.0;
+    let q_current = 0.0;
+    for _ in 0..nb_steps {
         mdp.reset();
         while !mdp.is_finished() {
-            let proba = net
-                .forward(
-                    &candle_core::Tensor::from_slice(
-                        &[mdp.pos, mdp.speed],
-                        (2,),
-                        &candle_core::Device::Cpu,
-                    )
-                    .unwrap(),
-                )
-                .unwrap();
+            let proba = net.forward(&candle_core::Tensor::from_slice(
+                &[mdp.pos, mdp.speed],
+                (2,),
+                &candle_core::Device::Cpu,
+            )?)?;
 
             reward = mdp.step(net.policy(mdp), 0.1).unwrap_or(0.0) as f64;
-            score += reward;
             for var in vars.all_vars().iter() {
                 if let Some(grad) = proba.backward().unwrap().get(var) {
-                    var.set(&var.sub(&(grad * (alpha * (reward - v)))?)?);
+                    var.set(&var.sub(&(grad * (alpha * (q_current + reward - q_previous)))?)?);
                 }
             }
         }

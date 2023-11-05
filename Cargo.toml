@@ -1,12 +1,13 @@
 [package]
-name = "my_bevy_game"
+name = "mountaincar_rs"
 version = "0.1.0"
 edition = "2021"
+author = "Dylan Dronnier <dylan.dronnier@posteo.net>"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = { version = "0.11.3", features = ["wayland", "png", "bevy_gizmos", "bevy_text", "bevy_winit", "bevy_asset", "bevy_ui"], default-features = false }
+bevy = { version = "0.11.3", features = ["wayland", "png", "bevy_gizmos", "bevy_text", "bevy_winit", "bevy_asset", "bevy_ui", "default_font"], default-features = false }
 candle-core = "0.2.2"
 candle-nn = "0.2.2"
 itertools = "0.11.0"

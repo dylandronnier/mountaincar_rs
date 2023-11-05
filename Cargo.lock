@@ -1934,7 +1934,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "my_bevy_game"
+name = "mountaincar_rs"
 version = "0.1.0"
 dependencies = [
  "bevy",
