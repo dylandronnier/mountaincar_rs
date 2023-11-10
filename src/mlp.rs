@@ -1,18 +1,22 @@
 use candle_core::{safetensors, Module, Tensor};
-use candle_nn::VarMap;
 use std::collections::HashMap;
 use std::path::Path;
 
-struct MultiLayerPerceptron {
-    layers: Vec<candle_nn::Linear>,
+pub struct MultiLayerPerceptron<const I: usize, const O: usize> {
+    pub device: candle_core::Device,
+    pub layers: Vec<candle_nn::Linear>,
 }
 
-impl MultiLayerPerceptron {
-    pub fn new(vs: candle_nn::VarBuilder, topology: &[usize]) -> candle_core::error::Result<Self> {
+impl<const I: usize, const O: usize> MultiLayerPerceptron<I, O> {
+    pub fn new(
+        vs: candle_nn::VarBuilder,
+        intern_layers_sizes: &[usize],
+    ) -> candle_core::error::Result<Self> {
         let mut nn = Self {
-            layers: Vec::with_capacity(topology.len()),
+            device: &candle_core::Device.cuda_if_available()?,
+            layers: Vec::with_capacity(2 + intern_layers_sizes.len()),
         };
-        for (i, w) in topology.windows(2).enumerate() {
+        for (i, w) in intern_layers_sizes.windows(2).enumerate() {
             nn.layers
                 .push(candle_nn::linear(w[0], w[1], vs.pp(i.to_string()))?)
         }

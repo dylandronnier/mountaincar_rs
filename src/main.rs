@@ -1,3 +1,7 @@
+#![feature(adt_const_params)]
+#![feature(generic_const_exprs)]
+#![feature(variant_count)]
+
 use bevy::{
     math::{cubic_splines::CubicCurve, vec2},
     prelude::*,
@@ -10,6 +14,7 @@ mod ai;
 mod game_bis;
 mod game_over;
 mod mdp;
+mod mlp;
 mod mountaincar;
 
 const HEIGHT: f32 = 1080.0;

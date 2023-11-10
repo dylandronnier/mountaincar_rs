@@ -1,5 +1,6 @@
 use crate::mdp;
 use rand::Rng;
+use strum::EnumCount;
 
 pub trait Ground {
     fn slope(&self, x: f32) -> f32;
@@ -13,7 +14,7 @@ pub struct MountainCar<T: Ground> {
     pub ground: T,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, EnumCount)]
 pub enum MountainAction {
     Left = -1,
     Right = 1,
@@ -37,7 +38,7 @@ where
     }
 }
 
-impl<T: Ground> mdp::Mdp for MountainCar<T> {
+impl<T: Ground> mdp::Mdp<2> for MountainCar<T> {
     type Action = MountainAction;
 
     fn reset(&mut self) {
@@ -56,5 +57,9 @@ impl<T: Ground> mdp::Mdp for MountainCar<T> {
             time_step * (a as i8 as f32 * MOTOR_POWER - slope * GRAVITY - self.speed * FRICTION);
         self.pos += time_step * self.speed;
         Ok(-1.0)
+    }
+
+    fn feature(&self) -> [f32; 2] {
+        [self.pos, self.speed]
     }
 }
