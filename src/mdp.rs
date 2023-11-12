@@ -1,8 +1,6 @@
-use crate::mlp::MultiLayerPerceptron;
 use std::fmt::{self, Debug, Display};
 
 use std::mem;
-use strum::EnumCount;
 
 #[derive(Debug, Clone)]
 pub struct NotAllowed<A>
@@ -22,7 +20,7 @@ where
 }
 
 pub trait Mdp<const D: usize> {
-    type Action: Debug + PartialEq + EnumCount;
+    type Action: Debug + PartialEq;
     fn reset(&mut self);
     fn step(&mut self, a: Self::Action, t: f32) -> Result<f32, NotAllowed<Self::Action>>;
     fn is_finished(&self) -> bool;
@@ -44,22 +42,22 @@ where
     }
 }
 
-impl<const D: usize, T> Agent<D, T>
-    for MultiLayerPerceptron<D, { mem::variant_count::<<T as Mdp>::Action>() }>
-where
-    T: Mdp<D>,
-{
-    fn policy(&self, s: &T) -> <T as Mdp<D>>::Action {
-        let i = self
-            .forward(&candle_core::Tensor::from_slice(&s.feature(), D, &self.device).unwrap())
-            .unwrap()
-            .argmax(0)
-            .unwrap()
-            .to_scalar::<u32>()
-            .unwrap() as u8;
-        i as <T as Mdp<D>>::Action
-    }
-}
+// impl<const D: usize, T> Agent<D, T>
+//     for MultiLayerPerceptron<D, { mem::variant_count::<<T as Mdp>::Action>() }>
+// where
+//     T: Mdp<D>,
+// {
+//     fn policy(&self, s: &T) -> <T as Mdp<D>>::Action {
+//         let i = self
+//             .forward(&candle_core::Tensor::from_slice(&s.feature(), D, &self.device).unwrap())
+//             .unwrap()
+//             .argmax(0)
+//             .unwrap()
+//             .to_scalar::<u32>()
+//             .unwrap() as u8;
+//         i as <T as Mdp<D>>::Action
+//     }
+// }
 
 #[test]
 fn test() {}

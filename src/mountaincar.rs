@@ -1,6 +1,5 @@
 use crate::mdp;
 use rand::Rng;
-use strum::EnumCount;
 
 pub trait Ground {
     fn slope(&self, x: f32) -> f32;
@@ -14,7 +13,7 @@ pub struct MountainCar<T: Ground> {
     pub ground: T,
 }
 
-#[derive(Debug, PartialEq, EnumCount)]
+#[derive(Debug, PartialEq)]
 pub enum MountainAction {
     Left = -1,
     Right = 1,

@@ -10,11 +10,11 @@ use bevy::{
 };
 
 //mod game;
-mod ai;
+// mod ai;
 mod game_bis;
 mod game_over;
 mod mdp;
-mod mlp;
+// mod mlp;
 mod mountaincar;
 
 const HEIGHT: f32 = 1080.0;
