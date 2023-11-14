@@ -6,9 +6,27 @@ author = "Dylan Dronnier <dylan.dronnier@posteo.net>"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "game"           # The name of the target.
+path = "src/main.rs"    # The source file of the target.
+
+[[bin]]
+name = "train"           # The name of the target.
+path = "src/ai.rs"    # The source file of the target.
+
+
 [dependencies]
-bevy = { version = "0.11.3", features = ["wayland", "png", "bevy_gizmos", "bevy_text", "bevy_winit", "bevy_asset", "bevy_ui", "default_font"], default-features = false }
 candle-core = "0.2.2"
 candle-nn = "0.2.2"
 itertools = "0.11.0"
 rand = "0.8.5"
+
+[dependencies.bevy]
+version = "0.12.0"
+default-features = false 
+features = ["png", "bevy_gizmos", "bevy_text", "bevy_winit", "bevy_asset", "bevy_ui", "default_font"]
+
+[target.'cfg(target_os = "linux")'.dependencies.bevy]
+version = "0.12.0"
+default-features = false 
+features = ["wayland"]

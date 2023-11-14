@@ -13,7 +13,7 @@ impl<const I: usize, const O: usize> MultiLayerPerceptron<I, O> {
         intern_layers_sizes: &[usize],
     ) -> candle_core::error::Result<Self> {
         let mut nn = Self {
-            device: &candle_core::Device.cuda_if_available()?,
+            device: candle_core::Device::cuda_if_available(0).unwrap_or(candle_core::Device::Cpu),
             layers: Vec::with_capacity(2 + intern_layers_sizes.len()),
         };
         for (i, w) in intern_layers_sizes.windows(2).enumerate() {

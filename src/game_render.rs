@@ -9,7 +9,7 @@ const PADDING: f32 = 22.0;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(FixedTime::new_from_secs(1.0 / 50.0))
+        app.insert_resource(<Time<Fixed>>::from_seconds(1.0 / 50.0))
             .insert_resource(GameTimer(Timer::from_seconds(30.0, TimerMode::Once)))
             .add_systems(OnEnter(GameState::Playing), setup_game)
             .add_systems(
@@ -157,7 +157,7 @@ fn move_car(
     keyboard_input: Res<Input<KeyCode>>,
     mut first_query: Query<&mut Env>,
     mut second_query: Query<&mut Transform, With<Car>>,
-    time_step: Res<FixedTime>,
+    time_step: Res<Time<Fixed>>,
 ) {
     let action = {
         if keyboard_input.pressed(KeyCode::H) {
@@ -171,7 +171,7 @@ fn move_car(
 
     let mut e = first_query.single_mut();
     let mut t = second_query.single_mut();
-    e.0.step(action, time_step.period.as_secs_f32());
+    e.0.step(action, time_step.timestep().as_secs_f32());
     *t = Transform::from_cubic_curve(&e.0.ground, e.0.pos, 2.0);
 }
 

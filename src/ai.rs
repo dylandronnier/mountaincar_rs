@@ -1,48 +1,19 @@
 use candle_core::{Module, Tensor};
 use candle_nn::VarMap;
 
+mod mdp;
+mod mlp;
+mod mountaincar;
+
 use crate::mdp::{Agent, Mdp};
 use crate::mlp::MultiLayerPerceptron;
-use crate::mountaincar::{self, Ground, MountainAction};
+use crate::mountaincar::{Ground, MountainAction};
 
-// struct Nn {
-//     ln1: candle_nn::Linear,
-//     ln2: candle_nn::Linear,
-//     ln3: candle_nn::Linear,
-//     ln4: candle_nn::Linear,
-// }
-
-// impl Nn {
-//     pub fn new(vs: candle_nn::VarBuilder) -> candle_core::error::Result<Self> {
-//         let layer1 = candle_nn::linear(2, 4, vs.pp("ln1"))?;
-//         let layer2 = candle_nn::linear(4, 8, vs.pp("ln2"))?;
-//         let layer3 = candle_nn::linear(8, 4, vs.pp("ln3"))?;
-//         let layer4 = candle_nn::linear(4, 2, vs.pp("ln4"))?;
-//         Ok(Self {
-//             ln1: layer1,
-//             ln2: layer2,
-//             ln3: layer3,
-//             ln4: layer4,
-//         })
-//     }
-//
-//     pub fn forward(&self, xs: &candle_core::Tensor) -> candle_core::error::Result<Tensor> {
-//         let xs = self.ln1.forward(xs)?;
-//         let xs = xs.relu()?;
-//         let xs = self.ln2.forward(&xs)?;
-//         let xs = xs.relu()?;
-//         let xs = self.ln3.forward(&xs)?;
-//         let xs = xs.relu()?;
-//         let xs = self.ln4.forward(&xs)?;
-//         candle_nn::ops::softmax(&xs, 1)
-//     }
-// }
-
-impl<T: Ground> Agent<mountaincar::MountainCar<T>> for MultiLayerPerceptron<2, 3> {
+impl<T: Ground> Agent<2, mountaincar::MountainCar<T>> for MultiLayerPerceptron<2, 3> {
     fn policy(
         &self,
         s: &mountaincar::MountainCar<T>,
-    ) -> <mountaincar::MountainCar<T> as crate::mdp::Mdp>::Action {
+    ) -> <mountaincar::MountainCar<T> as crate::mdp::Mdp<2>>::Action {
         let i = self
             .forward(
                 &candle_core::Tensor::from_slice(

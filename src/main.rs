@@ -1,6 +1,6 @@
-#![feature(adt_const_params)]
-#![feature(generic_const_exprs)]
-#![feature(variant_count)]
+// #![feature(adt_const_params)]
+// #![feature(generic_const_exprs)]
+// #![feature(variant_count)]
 
 use bevy::{
     math::{cubic_splines::CubicCurve, vec2},
@@ -9,10 +9,9 @@ use bevy::{
     sprite::MaterialMesh2dBundle,
 };
 
-//mod game;
 // mod ai;
-mod game_bis;
 mod game_over;
+mod game_render;
 mod mdp;
 // mod mlp;
 mod mountaincar;
@@ -59,7 +58,7 @@ fn main() {
         }))
         .add_state::<GameState>()
         .add_systems(Startup, setup)
-        .add_plugins((game_over::GameOverPlugin, game_bis::GamePlugin))
+        .add_plugins((game_over::GameOverPlugin, game_render::GamePlugin))
         .run()
 }
 
@@ -86,7 +85,7 @@ fn setup(
         vec2(WIDTH.div_euclid(2.0), -60.0),  // -30.0
     ]];
 
-    let bezier = Bezier::new(control_points).to_curve();
+    let bezier = CubicBezier::new(control_points).to_curve();
 
     let mut triangle_strip = Vec::new();
 
@@ -114,6 +113,7 @@ fn setup(
         ..Default::default()
     });
 
+    // Spawn the associated bezier
     commands.spawn(Env(mountaincar::MountainCar::new(bezier)));
 }
 
