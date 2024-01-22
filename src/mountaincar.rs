@@ -1,13 +1,17 @@
 use crate::mdp;
+use candle_core::Tensor;
 use rand::Rng;
 
-pub trait Ground {
+pub trait Ground: Send + Sync {
     fn slope(&self, x: f32) -> f32;
 }
 
 // "Mountain car" decision process
 
-pub struct MountainCar<T: Ground> {
+pub struct MountainCar<T>
+where
+    T: Ground,
+{
     pub pos: f32,
     pub speed: f32,
     pub ground: T,
@@ -24,10 +28,7 @@ pub const MOTOR_POWER: f32 = 0.1;
 pub const FRICTION: f32 = 0.4;
 pub const GRAVITY: f32 = 0.1;
 
-impl<T> MountainCar<T>
-where
-    T: Ground,
-{
+impl<T: Ground> MountainCar<T> {
     pub fn new(g: T) -> Self {
         MountainCar {
             pos: rand::thread_rng().gen_range(0.25..0.3),
@@ -37,7 +38,7 @@ where
     }
 }
 
-impl<T: Ground> mdp::Mdp<2> for MountainCar<T> {
+impl<T: Ground> mdp::MarkovDecisionProcess for MountainCar<T> {
     type Action = MountainAction;
 
     fn reset(&mut self) {
@@ -58,7 +59,7 @@ impl<T: Ground> mdp::Mdp<2> for MountainCar<T> {
         Ok(-1.0)
     }
 
-    fn feature(&self) -> [f32; 2] {
-        [self.pos, self.speed]
+    fn feature(&self) -> Tensor {
+        Tensor::try_from(vec![self.pos, self.speed]).unwrap()
     }
 }

@@ -1,7 +1,12 @@
-use crate::mdp::Mdp;
-use crate::mountaincar;
-use crate::{despawn_screen, Env, GameState};
-use bevy::{math::cubic_splines::CubicCurve, prelude::*};
+use crate::mdp::MarkovDecisionProcess;
+use crate::mountaincar::{MountainAction, MountainCar};
+use crate::wrapper_bezier::Wrapper;
+use crate::{despawn_screen, GameState};
+use crate::{HEIGHT, WIDTH};
+use bevy::{
+    math::cubic_splines::CubicCurve, math::vec2, prelude::*, render::mesh::PrimitiveTopology,
+    sprite::MaterialMesh2dBundle,
+};
 
 pub struct GamePlugin;
 
@@ -9,28 +14,55 @@ const PADDING: f32 = 22.0;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(<Time<Fixed>>::from_seconds(1.0 / 50.0))
-            .insert_resource(GameTimer(Timer::from_seconds(30.0, TimerMode::Once)))
-            .add_systems(OnEnter(GameState::Playing), setup_game)
-            .add_systems(
-                FixedUpdate,
-                (
-                    move_car,
-                    timer_text_update_system,
-                    state_text_update_system,
-                    end_of_game,
-                )
-                    .run_if(in_state(GameState::Playing)),
+        let control_points = [[
+            vec2(-WIDTH.div_euclid(2.0), -80.0), // 0.0
+            vec2(450.0, -1200.0),                // -1120.0
+            vec2(630.0, 260.0),                  // 340.0
+            vec2(WIDTH.div_euclid(2.0), -60.0),  // -30.0
+        ]];
+
+        let bezier = CubicBezier::new(control_points).to_curve();
+
+        app.insert_resource(Wrapper {
+            m: MountainCar::new(bezier),
+        })
+        .insert_resource(<Time<Fixed>>::from_seconds(1.0 / 50.0))
+        .insert_resource(GameTimer(Timer::from_seconds(30.0, TimerMode::Once)))
+        .add_systems(OnEnter(GameState::Playing), setup_game)
+        .add_systems(
+            FixedUpdate,
+            (
+                move_car,
+                timer_text_update_system,
+                state_text_update_system,
+                end_of_game,
             )
-            .add_systems(
-                OnExit(GameState::Playing),
-                (despawn_screen::<StateText>, despawn_screen::<TimeText>),
-            );
+                .run_if(in_state(GameState::Playing)),
+        )
+        .add_systems(
+            OnExit(GameState::Playing),
+            (despawn_screen::<StateText>, despawn_screen::<TimeText>),
+        );
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct TriangleStrip {
+    pub points: Vec<Vec3>,
 }
 
 pub trait CubicTransform {
     fn from_cubic_curve(c: &CubicCurve<Vec2>, pos: f32, z_coordinate: f32) -> Transform;
+}
+
+impl From<TriangleStrip> for Mesh {
+    fn from(line: TriangleStrip) -> Self {
+        // This tells wgpu that the positions are a list of points
+        // where a line will be drawn between each consecutive point
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleStrip);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, line.points);
+        mesh
+    }
 }
 
 impl CubicTransform for Transform {
@@ -39,13 +71,6 @@ impl CubicTransform for Transform {
         let dp = c.velocity(pos).normalize();
         Transform::from_xyz(p.x - PADDING * dp.y, p.y + PADDING * dp.x, z_coordinate)
             .with_rotation(Quat::from_rotation_z(f32::atan(dp.y / dp.x)))
-    }
-}
-
-impl mountaincar::Ground for CubicCurve<Vec2> {
-    fn slope(&self, x: f32) -> f32 {
-        let v = self.velocity(x);
-        v.y / v.x
     }
 }
 
@@ -66,9 +91,47 @@ struct GameTimer(Timer);
 fn setup_game(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    query: Query<&Env>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    wrap: Res<Wrapper>,
     mut timer: ResMut<GameTimer>,
 ) {
+    // Spawn 2D camera
+    commands.spawn(Camera2dBundle::default());
+
+    // Spawn background image
+    commands.spawn(SpriteBundle {
+        texture: asset_server.load("drawing3.png"),
+        transform: Transform::from_xyz(0.0, 0.0, -2.0),
+        ..default()
+    });
+
+    let mut triangle_strip = Vec::new();
+
+    for point in wrap.m.ground.iter_positions(100) {
+        triangle_strip.push(Vec3::new(point.x, -HEIGHT.div_euclid(2.0), 2.0));
+        triangle_strip.push(Vec3::new(point.x, point.y, 2.0));
+    }
+
+    // Spawn the flag
+    let p = wrap.m.ground.position(0.92);
+    commands.spawn(SpriteBundle {
+        texture: asset_server.load("flag.png"),
+        transform: Transform::from_xyz(p.x, p.y + 36.0, 2.0),
+        ..default()
+    });
+
+    // Spawn the ground
+    commands.spawn(MaterialMesh2dBundle {
+        mesh: meshes
+            .add(Mesh::from(TriangleStrip {
+                points: triangle_strip,
+            }))
+            .into(),
+        material: materials.add(Color::rgb(0.3, 0.2, 0.1).into()),
+        ..Default::default()
+    });
+
     // Spawn score text
     commands.spawn((
         TextBundle::from_sections([
@@ -94,8 +157,6 @@ fn setup_game(
         TimeText,
     ));
 
-    let e = query.single();
-
     // Spawn state text
     commands.spawn((
         TextBundle::from_sections([
@@ -108,7 +169,7 @@ fn setup_game(
                 },
             ),
             TextSection::new(
-                e.0.pos.to_string(),
+                " ",
                 TextStyle {
                     font_size: 20.0,
                     color: Color::BLACK,
@@ -124,7 +185,7 @@ fn setup_game(
                 },
             ),
             TextSection::new(
-                e.0.speed.to_string(),
+                " ",
                 TextStyle {
                     font_size: 20.0,
                     color: Color::BLACK,
@@ -144,35 +205,38 @@ fn setup_game(
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("car.png"),
-            transform: Transform::from_cubic_curve(&e.0.ground, e.0.pos, 2.0),
+            transform: Transform::from_cubic_curve(&wrap.m.ground, 0., 2.0),
             ..default()
         },
         Car,
     ));
+
+    // commands.insert_resource(Env(MountainCar::new(&phy.0)));
 
     timer.0.reset();
 }
 
 fn move_car(
     keyboard_input: Res<Input<KeyCode>>,
-    mut first_query: Query<&mut Env>,
-    mut second_query: Query<&mut Transform, With<Car>>,
+    mut query: Query<&mut Transform, With<Car>>,
+    mut wrap: ResMut<Wrapper>,
     time_step: Res<Time<Fixed>>,
 ) {
     let action = {
         if keyboard_input.pressed(KeyCode::H) {
-            mountaincar::MountainAction::Left
+            MountainAction::Left
         } else if keyboard_input.pressed(KeyCode::L) {
-            mountaincar::MountainAction::Right
+            MountainAction::Right
         } else {
-            mountaincar::MountainAction::DoNothing
+            MountainAction::DoNothing
         }
     };
 
-    let mut e = first_query.single_mut();
-    let mut t = second_query.single_mut();
-    e.0.step(action, time_step.timestep().as_secs_f32());
-    *t = Transform::from_cubic_curve(&e.0.ground, e.0.pos, 2.0);
+    let mut t = query.single_mut();
+    wrap.m
+        .step(action, time_step.timestep().as_secs_f32())
+        .unwrap_or(0.0);
+    *t = Transform::from_cubic_curve(&wrap.m.ground, wrap.m.pos, 2.0);
 }
 
 fn timer_text_update_system(mut query: Query<&mut Text, With<TimeText>>, timer: Res<GameTimer>) {
@@ -181,15 +245,11 @@ fn timer_text_update_system(mut query: Query<&mut Text, With<TimeText>>, timer: 
         text.sections[1].value = format!("{t:.1}")
     }
 }
-fn state_text_update_system(
-    mut query: Query<&mut Text, With<StateText>>,
-    second_query: Query<&Env>,
-) {
-    let e = second_query.single();
+fn state_text_update_system(mut query: Query<&mut Text, With<StateText>>, wrap: Res<Wrapper>) {
     for mut text in &mut query {
-        let x = e.0.pos;
+        let x = wrap.m.pos;
         text.sections[1].value = format!("{x:.3}");
-        let v = e.0.speed;
+        let v = wrap.m.speed;
         text.sections[3].value = format!("{v:.3}")
     }
 }
@@ -199,9 +259,9 @@ fn end_of_game(
     mut timer: ResMut<GameTimer>,
     time: Res<Time>,
     mut game_state: ResMut<NextState<GameState>>,
-    query: Query<&Env>,
+    wrap: Res<Wrapper>,
 ) {
-    if timer.0.tick(time.delta()).just_finished() || query.single().0.is_finished() {
+    if timer.0.tick(time.delta()).just_finished() || wrap.m.is_finished() {
         game_state.set(GameState::GameOver);
     }
 }
