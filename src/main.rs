@@ -30,7 +30,7 @@ fn main() {
             }),
             ..default()
         }))
-        .add_state::<GameState>()
+        .init_state::<GameState>()
         .add_plugins((game_over::GameOverPlugin, game_render::GamePlugin))
         .run()
 }

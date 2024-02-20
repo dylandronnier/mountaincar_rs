@@ -3,6 +3,7 @@ use crate::mountaincar::{MountainAction, MountainCar};
 use crate::wrapper_bezier::Wrapper;
 use crate::{despawn_screen, GameState};
 use crate::{HEIGHT, WIDTH};
+use bevy::render::render_asset::RenderAssetUsages;
 use bevy::{
     math::cubic_splines::CubicCurve, math::vec2, prelude::*, render::mesh::PrimitiveTopology,
     sprite::MaterialMesh2dBundle,
@@ -59,7 +60,10 @@ impl From<TriangleStrip> for Mesh {
     fn from(line: TriangleStrip) -> Self {
         // This tells wgpu that the positions are a list of points
         // where a line will be drawn between each consecutive point
-        let mut mesh = Mesh::new(PrimitiveTopology::TriangleStrip);
+        let mut mesh = Mesh::new(
+            PrimitiveTopology::TriangleStrip,
+            RenderAssetUsages::RENDER_WORLD,
+        );
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, line.points);
         mesh
     }
@@ -121,6 +125,7 @@ fn setup_game(
         ..default()
     });
 
+    let custom_texture_handle: Handle<Image> = asset_server.load("texture/stone2.png");
     // Spawn the ground
     commands.spawn(MaterialMesh2dBundle {
         mesh: meshes
@@ -128,7 +133,8 @@ fn setup_game(
                 points: triangle_strip,
             }))
             .into(),
-        material: materials.add(Color::rgb(0.3, 0.2, 0.1).into()),
+        // transform: Transform::from_scale(Vec3::splat(128.)),
+        material: materials.add(ColorMaterial::from(custom_texture_handle)),
         ..Default::default()
     });
 
@@ -217,15 +223,15 @@ fn setup_game(
 }
 
 fn move_car(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<&mut Transform, With<Car>>,
     mut wrap: ResMut<Wrapper>,
     time_step: Res<Time<Fixed>>,
 ) {
     let action = {
-        if keyboard_input.pressed(KeyCode::H) {
+        if keyboard_input.pressed(KeyCode::KeyH) {
             MountainAction::Left
-        } else if keyboard_input.pressed(KeyCode::L) {
+        } else if keyboard_input.pressed(KeyCode::KeyL) {
             MountainAction::Right
         } else {
             MountainAction::DoNothing
