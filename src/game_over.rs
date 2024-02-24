@@ -1,6 +1,13 @@
 use bevy::{app::AppExit, prelude::*};
 
-use crate::{despawn_screen, GameState};
+use crate::despawn_screen;
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
+pub enum GameState {
+    #[default]
+    Playing,
+    GameOver,
+}
 
 // This plugin manages the menu, with 5 different screens:
 // - a main menu with "New Game", "Settings", "Quit"

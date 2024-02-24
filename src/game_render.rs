@@ -1,12 +1,23 @@
+use std::ops::Div;
+
+use crate::despawn_screen;
+use crate::game_over::GameState;
 use crate::mdp::MarkovDecisionProcess;
 use crate::mountaincar::{MountainAction, MountainCar};
 use crate::wrapper_bezier::Wrapper;
-use crate::{despawn_screen, GameState};
 use crate::{HEIGHT, WIDTH};
-use bevy::render::render_asset::RenderAssetUsages;
+use bevy::reflect::List;
+use bevy::render::{
+    render_asset::RenderAssetUsages,
+    render_resource::{AsBindGroup, ShaderRef},
+};
+use bevy::sprite::Material2dPlugin;
 use bevy::{
-    math::cubic_splines::CubicCurve, math::vec2, prelude::*, render::mesh::PrimitiveTopology,
-    sprite::MaterialMesh2dBundle,
+    math::cubic_splines::CubicCurve,
+    math::vec2,
+    prelude::*,
+    render::mesh::PrimitiveTopology,
+    sprite::{Material2d, MaterialMesh2dBundle},
 };
 
 pub struct GamePlugin;
@@ -24,26 +35,27 @@ impl Plugin for GamePlugin {
 
         let bezier = CubicBezier::new(control_points).to_curve();
 
-        app.insert_resource(Wrapper {
-            m: MountainCar::new(bezier),
-        })
-        .insert_resource(<Time<Fixed>>::from_seconds(1.0 / 50.0))
-        .insert_resource(GameTimer(Timer::from_seconds(30.0, TimerMode::Once)))
-        .add_systems(OnEnter(GameState::Playing), setup_game)
-        .add_systems(
-            FixedUpdate,
-            (
-                move_car,
-                timer_text_update_system,
-                state_text_update_system,
-                end_of_game,
+        app.add_plugins(Material2dPlugin::<CustomMaterial>::default())
+            .insert_resource(Wrapper {
+                m: MountainCar::new(bezier),
+            })
+            .insert_resource(<Time<Fixed>>::from_seconds(1.0 / 50.0))
+            .insert_resource(GameTimer(Timer::from_seconds(30.0, TimerMode::Once)))
+            .add_systems(OnEnter(GameState::Playing), (setup_decor, setup_text))
+            .add_systems(
+                FixedUpdate,
+                (
+                    move_car,
+                    timer_text_update_system,
+                    state_text_update_system,
+                    end_of_game,
+                )
+                    .run_if(in_state(GameState::Playing)),
             )
-                .run_if(in_state(GameState::Playing)),
-        )
-        .add_systems(
-            OnExit(GameState::Playing),
-            (despawn_screen::<StateText>, despawn_screen::<TimeText>),
-        );
+            .add_systems(
+                OnExit(GameState::Playing),
+                (despawn_screen::<StateText>, despawn_screen::<TimeText>),
+            );
     }
 }
 
@@ -60,12 +72,17 @@ impl From<TriangleStrip> for Mesh {
     fn from(line: TriangleStrip) -> Self {
         // This tells wgpu that the positions are a list of points
         // where a line will be drawn between each consecutive point
-        let mut mesh = Mesh::new(
+        let v = Vec2::new(WIDTH, HEIGHT);
+        let mut line_points2d: Vec<Vec2> = Vec::new();
+        for p in line.points.iter() {
+            line_points2d.push(<Vec3 as FromReflect>::from_reflect(p).unwrap().xy().div(v))
+        }
+        Mesh::new(
             PrimitiveTopology::TriangleStrip,
             RenderAssetUsages::RENDER_WORLD,
-        );
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, line.points);
-        mesh
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, line.points)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, line_points2d)
     }
 }
 
@@ -92,13 +109,28 @@ struct Car;
 #[derive(Resource)]
 struct GameTimer(Timer);
 
-fn setup_game(
+// Background shader material
+#[derive(AsBindGroup, Debug, Clone, Asset, TypePath)]
+pub struct CustomMaterial {
+    #[uniform(0)]
+    color: Color,
+    #[texture(1)]
+    #[sampler(2)]
+    color_texture: Option<Handle<Image>>,
+}
+
+impl Material2d for CustomMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/custom_material.wgsl".into()
+    }
+}
+
+fn setup_decor(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut materials: ResMut<Assets<CustomMaterial>>,
     wrap: Res<Wrapper>,
-    mut timer: ResMut<GameTimer>,
 ) {
     // Spawn 2D camera
     commands.spawn(Camera2dBundle::default());
@@ -110,13 +142,6 @@ fn setup_game(
         ..default()
     });
 
-    let mut triangle_strip = Vec::new();
-
-    for point in wrap.m.ground.iter_positions(100) {
-        triangle_strip.push(Vec3::new(point.x, -HEIGHT.div_euclid(2.0), 2.0));
-        triangle_strip.push(Vec3::new(point.x, point.y, 2.0));
-    }
-
     // Spawn the flag
     let p = wrap.m.ground.position(0.92);
     commands.spawn(SpriteBundle {
@@ -125,19 +150,41 @@ fn setup_game(
         ..default()
     });
 
-    let custom_texture_handle: Handle<Image> = asset_server.load("texture/stone2.png");
     // Spawn the ground
+    let mut triangle_strip = Vec::new();
+
+    for point in wrap.m.ground.iter_positions(100) {
+        triangle_strip.push(Vec3::new(point.x, -HEIGHT.div_euclid(2.0), 2.0));
+        triangle_strip.push(Vec3::new(point.x, point.y, 2.0));
+    }
+
     commands.spawn(MaterialMesh2dBundle {
+        //mesh: meshes.add(Mesh::from(Rectangle::new(250.0, 400.0))).into(),
         mesh: meshes
             .add(Mesh::from(TriangleStrip {
                 points: triangle_strip,
             }))
             .into(),
-        // transform: Transform::from_scale(Vec3::splat(128.)),
-        material: materials.add(ColorMaterial::from(custom_texture_handle)),
+        transform: Transform::from_scale(Vec3::splat(128.)),
+        material: materials.add(CustomMaterial {
+            color: Color::BLUE,
+            color_texture: Some(asset_server.load("texture/stone2.png")),
+        }),
         ..Default::default()
     });
 
+    // Spawn the car
+    commands.spawn((
+        SpriteBundle {
+            texture: asset_server.load("car.png"),
+            transform: Transform::from_cubic_curve(&wrap.m.ground, 0., 2.0),
+            ..default()
+        },
+        Car,
+    ));
+}
+
+fn setup_text(mut commands: Commands, mut timer: ResMut<GameTimer>) {
     // Spawn score text
     commands.spawn((
         TextBundle::from_sections([
@@ -207,18 +254,7 @@ fn setup_game(
         StateText,
     ));
 
-    // Spawn the car
-    commands.spawn((
-        SpriteBundle {
-            texture: asset_server.load("car.png"),
-            transform: Transform::from_cubic_curve(&wrap.m.ground, 0., 2.0),
-            ..default()
-        },
-        Car,
-    ));
-
-    // commands.insert_resource(Env(MountainCar::new(&phy.0)));
-
+    // Reset timer
     timer.0.reset();
 }
 

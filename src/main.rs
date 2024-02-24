@@ -8,15 +8,9 @@ mod mdp;
 mod mountaincar;
 mod wrapper_bezier;
 
+// Window size
 const HEIGHT: f32 = 1080.0;
 const WIDTH: f32 = 1620.0;
-
-#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
-enum GameState {
-    #[default]
-    Playing,
-    GameOver,
-}
 
 fn main() {
     App::new()
@@ -24,13 +18,11 @@ fn main() {
             primary_window: Some(Window {
                 title: "Mountain Car".into(),
                 resolution: (WIDTH, HEIGHT).into(),
-                // mode: WindowMode::BorderlessFullscreen,
-                // decorations: false,
                 ..default()
             }),
             ..default()
         }))
-        .init_state::<GameState>()
+        .init_state::<game_over::GameState>()
         .add_plugins((game_over::GameOverPlugin, game_render::GamePlugin))
         .run()
 }
