@@ -28,10 +28,10 @@ pub trait MarkovDecisionProcess {
     // Reset the MDP to the initial state
     fn reset(&mut self);
 
-    //
+    // Step the
     fn step(&mut self, a: Self::Action, t: f32) -> Result<f32, NotAllowed<Self::Action>>;
 
-    //
+    // Indicate if the MDP is at the terminal state.
     fn is_finished(&self) -> bool;
 
     // The feature

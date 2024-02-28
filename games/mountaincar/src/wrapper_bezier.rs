@@ -20,4 +20,8 @@ impl mountaincar::Ground for CubicCurve<Vec2> {
         let v = self.velocity(x);
         v.y / v.x
     }
+
+    fn derivivative(&self, x: f32) -> f32 {
+        1_400.0 * self.velocity(x).length_recip()
+    }
 }

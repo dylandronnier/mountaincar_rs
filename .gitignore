@@ -1,2 +1,6 @@
 /target
 /assets
+*.png
+*.svg
+*.jpeg
+*.jpg

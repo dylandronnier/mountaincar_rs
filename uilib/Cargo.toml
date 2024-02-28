@@ -1,0 +1,26 @@
+[package]
+name = "uilib"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "uilib"
+path = "src/lib.rs"
+
+[dependencies]
+image = "0.24"
+itertools = "0.12"
+rand = "0.8"
+
+[dependencies.bevy]
+version = "^0.13"
+default-features = false 
+features = ["png", "bevy_text", "bevy_winit", "bevy_asset", "bevy_ui", "default_font"]
+
+[target.'cfg(target_os = "linux")'.dependencies.bevy]
+version = "^0.13"
+default-features = false 
+features = ["wayland"]
+
