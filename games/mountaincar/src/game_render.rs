@@ -1,8 +1,7 @@
-use crate::aibrain::{load_tensor, SimpleMap};
+use crate::aibrain::{load_tensor, NeuralNet};
 use crate::despawn_screen;
-use crate::mdp::Agent;
-use crate::mdp::MarkovDecisionProcess;
 use crate::mountaincar::{MountainAction, MountainCar};
+use crate::tabular::Tabular;
 use crate::wrapper_bezier::Wrapper;
 use crate::{HEIGHT, WIDTH};
 use bevy::reflect::List;
@@ -11,6 +10,7 @@ use bevy::{
     math::cubic_splines::CubicCurve, math::vec2, prelude::*, render::mesh::PrimitiveTopology,
     sprite::MaterialMesh2dBundle,
 };
+use rl::MarkovDecisionProcess;
 use std::ops::{Add, Div};
 use uilib::{GameMode, GameState};
 
@@ -28,7 +28,7 @@ impl Plugin for GamePlugin {
                 setup_text.after(setup_resources),
             ),
         )
-        .add_systems(OnEnter(GameMode::AI), load_tensor)
+        .add_systems(OnEnter(GameMode::AI), load_tensor::<Tabular>)
         .add_systems(
             FixedUpdate,
             (
@@ -38,7 +38,7 @@ impl Plugin for GamePlugin {
                 move_car_ia
                     .run_if(in_state(GameState::Playing))
                     .run_if(in_state(GameMode::AI))
-                    .run_if(resource_exists::<SimpleMap>),
+                    .run_if(resource_exists::<NeuralNet>),
                 (
                     timer_text_update_system,
                     state_text_update_system,
@@ -320,12 +320,11 @@ fn move_car_ia(
     mut query: Query<&mut Transform, With<Car>>,
     mut wrap: ResMut<Wrapper>,
     time_step: Res<Time<Fixed>>,
-    brain: Res<SimpleMap>,
+    brain: Res<NeuralNet>,
 ) {
     for mut t in &mut query {
-        //let action = brain.decision(wrap.m.pos, wrap.m.speed).unwrap_or_default();
-        let action = brain.policy(&wrap.m).unwrap_or_else(|_| {
-            info!("snap!");
+        let action = brain.nn.policy(&wrap.m).unwrap_or_else(|_| {
+            error!("AI brain could not compute the action to take!");
             MountainAction::DoNothing
         });
         wrap.m

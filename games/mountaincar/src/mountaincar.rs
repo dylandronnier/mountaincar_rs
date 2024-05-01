@@ -1,8 +1,8 @@
 use std::{convert::TryFrom, error::Error};
 
-use crate::mdp;
 use candle_core::Tensor;
 use rand::Rng;
+use rl::MarkovDecisionProcess;
 
 pub trait Ground: Send + Sync {
     // The slope of the curve at the given point
@@ -45,7 +45,7 @@ impl<T: Ground> MountainCar<T> {
     }
 }
 
-impl<T: Ground> mdp::MarkovDecisionProcess for MountainCar<T> {
+impl<T: Ground> MarkovDecisionProcess for MountainCar<T> {
     type Action = MountainAction;
 
     fn reset(&mut self) {

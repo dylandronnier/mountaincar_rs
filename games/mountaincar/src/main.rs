@@ -5,8 +5,9 @@ use uilib::{GameMode, GameState, IconPath, MenuPlugin, SplashPlugin};
 
 mod aibrain;
 mod game_render;
-mod mdp;
+mod mlp;
 mod mountaincar;
+mod tabular;
 mod wrapper_bezier;
 
 // Window size

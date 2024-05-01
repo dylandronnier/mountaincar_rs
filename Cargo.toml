@@ -6,26 +6,6 @@
 
 [workspace]
 resolver = "2"
-members = ["games/mountaincar", "uilib"]
+members = ["games/mountaincar", "uilib", "rl"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-
-# [dependencies]
-# candle-core = "0.3"
-# candle-nn = "0.3"
-# image = "0.24"
-# itertools = "0.12"
-# rand = "0.8"
-# rfd = "0.14"
-# 
-# [dependencies.bevy]
-# version = "^0.13"
-# default-features = false 
-# features = ["png", "bevy_gizmos", "bevy_text", "bevy_winit", "bevy_asset",
-#   "bevy_ui", "bevy_pbr", "default_font"]
-# 
-# [target.'cfg(target_os = "linux")'.dependencies.bevy]
-# version = "^0.13"
-# default-features = false 
-# features = ["wayland"]

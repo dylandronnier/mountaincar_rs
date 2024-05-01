@@ -4,7 +4,6 @@ use std::{
     u32,
 };
 
-use bevy::{app::Plugin, math::f32};
 use candle_core::Tensor;
 
 #[derive(Debug, Clone)]
@@ -42,32 +41,31 @@ pub trait MarkovDecisionProcess {
     fn feature(&self) -> Tensor;
 }
 
-pub trait Render<T>
-where
-    T: MarkovDecisionProcess,
-{
-    type Plugin: Plugin;
-}
-
 pub trait Agent<T>
 where
     T: MarkovDecisionProcess,
 {
     fn policy(&self, s: &T) -> Result<T::Action, Box<dyn Error>>;
-    fn play_game(&self, e: &mut T) -> Result<f32, Box<dyn Error>> {
+    fn play_game(&self, e: &mut T, time_step: Option<f32>) -> Result<f32, Box<dyn Error>> {
         let mut total_reward = 0.0;
+        let time_step = time_step.unwrap_or(0.1);
         while !e.is_finished() {
             let a = self.policy(e)?;
-            total_reward += e.step(a, 0.1)?;
+            total_reward += e.step(a, time_step)?;
         }
         Ok(total_reward)
     }
-    fn evaluate(&self, e: &mut T, nb_games: Option<u32>) -> Result<f32, Box<dyn Error>> {
+    fn evaluate(
+        &self,
+        e: &mut T,
+        nb_games: Option<u32>,
+        time_step: Option<f32>,
+    ) -> Result<f32, Box<dyn Error>> {
         let n = nb_games.unwrap_or(1_000);
         let mut res = 0.0;
         for _ in 1..n {
             e.reset();
-            res += self.play_game(e)?;
+            res += self.play_game(e, time_step)?;
         }
         Ok(res)
     }
