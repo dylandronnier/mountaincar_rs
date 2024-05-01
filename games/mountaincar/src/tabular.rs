@@ -5,6 +5,7 @@ use std::convert::TryFrom;
 use std::error::Error;
 use std::ops::Add;
 
+use crate::aibrain::EncodedAgent;
 use crate::mountaincar::{self, MountainAction, MountainCar};
 
 pub struct Tabular {
@@ -50,3 +51,5 @@ impl TryFrom<&mut HashMap<String, Tensor>> for Tabular {
         })
     }
 }
+
+impl EncodedAgent for Tabular {}

@@ -8,6 +8,7 @@ use std::path::Path;
 use std::usize;
 use std::{collections::HashMap, u32};
 
+use crate::aibrain::EncodedAgent;
 use crate::mountaincar::{self, MountainAction, MountainCar};
 
 pub struct MultiLayerPerceptron<const I: usize, const O: usize> {
@@ -100,3 +101,5 @@ impl<const I: usize, const O: usize> TryFrom<&mut HashMap<String, Tensor>>
         Ok(mlp)
     }
 }
+
+impl EncodedAgent for MultiLayerPerceptron<2, 3> {}

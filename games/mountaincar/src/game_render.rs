@@ -1,5 +1,6 @@
-use crate::aibrain::{load_tensor, NeuralNet};
+use crate::aibrain::{EncodedAgent, NeuralNet};
 use crate::despawn_screen;
+use crate::mlp::MultiLayerPerceptron;
 use crate::mountaincar::{MountainAction, MountainCar};
 use crate::tabular::Tabular;
 use crate::wrapper_bezier::Wrapper;
@@ -11,6 +12,8 @@ use bevy::{
     sprite::MaterialMesh2dBundle,
 };
 use rl::MarkovDecisionProcess;
+
+use rfd::FileDialog;
 use std::ops::{Add, Div};
 use uilib::{GameMode, GameState};
 
@@ -20,42 +23,43 @@ const PADDING: f32 = 13.0;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            OnEnter(GameState::Playing),
-            (
-                setup_resources,
-                setup_decor.after(setup_resources),
-                setup_text.after(setup_resources),
-            ),
-        )
-        .add_systems(OnEnter(GameMode::AI), load_tensor::<Tabular>)
-        .add_systems(
-            FixedUpdate,
-            (
-                move_car_human
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(GameMode::Human)),
-                move_car_ia
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(GameMode::AI))
-                    .run_if(resource_exists::<NeuralNet>),
+        app.init_resource::<BrainType>()
+            .add_systems(
+                OnEnter(GameState::Playing),
                 (
-                    timer_text_update_system,
-                    state_text_update_system,
-                    end_of_game,
-                )
-                    .run_if(in_state(GameState::Playing)),
-            ),
-        )
-        .add_systems(
-            OnExit(GameState::Playing),
-            (
-                despawn_screen::<StateText>,
-                despawn_screen::<TimeText>,
-                despawn_screen::<Car>,
-                despawn_screen::<Decor>,
-            ),
-        );
+                    setup_resources,
+                    setup_decor.after(setup_resources),
+                    setup_text.after(setup_resources),
+                ),
+            )
+            .add_systems(OnEnter(GameMode::AI), load_brain)
+            .add_systems(
+                FixedUpdate,
+                (
+                    move_car_human
+                        .run_if(in_state(GameState::Playing))
+                        .run_if(in_state(GameMode::Human)),
+                    move_car_ia
+                        .run_if(in_state(GameState::Playing))
+                        .run_if(in_state(GameMode::AI))
+                        .run_if(resource_exists::<NeuralNet>),
+                    (
+                        timer_text_update_system,
+                        state_text_update_system,
+                        end_of_game,
+                    )
+                        .run_if(in_state(GameState::Playing)),
+                ),
+            )
+            .add_systems(
+                OnExit(GameState::Playing),
+                (
+                    despawn_screen::<StateText>,
+                    despawn_screen::<TimeText>,
+                    despawn_screen::<Car>,
+                    despawn_screen::<Decor>,
+                ),
+            );
     }
 }
 
@@ -122,6 +126,13 @@ struct Decor;
 // Resource timer
 #[derive(Resource)]
 struct GameTimer(Timer);
+
+#[derive(Resource, Default)]
+enum BrainType {
+    #[default]
+    Tab,
+    Mlp,
+}
 
 fn setup_resources(mut commands: Commands) {
     let control_points = [
@@ -291,6 +302,27 @@ fn setup_text(
 
     // Reset timer
     timer.0.reset();
+}
+
+fn load_brain(mut commands: Commands, b: Res<BrainType>) {
+    // Picking the file storing the brain
+    let Some(file) = FileDialog::new()
+        .add_filter("Safetensor file", &["safetensors"])
+        .pick_file()
+    else {
+        error!("No file picked");
+        return;
+    };
+
+    let Ok(nn) = (match *b {
+        BrainType::Tab => Tabular::load_tensor(file),
+        BrainType::Mlp => <MultiLayerPerceptron<2, 3>>::load_tensor(file),
+    }) else {
+        error!("Aïe !");
+        return;
+    };
+
+    commands.insert_resource(nn);
 }
 
 fn move_car_human(
