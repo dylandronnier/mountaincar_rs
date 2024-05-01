@@ -1,6 +1,10 @@
-use std::fmt::{self, Debug, Display};
+use std::{
+    error::Error,
+    fmt::{self, Debug, Display},
+    u32,
+};
 
-use bevy::app::Plugin;
+use bevy::{app::Plugin, math::f32};
 use candle_core::Tensor;
 
 #[derive(Debug, Clone)]
@@ -28,8 +32,8 @@ pub trait MarkovDecisionProcess {
     // Reset the MDP to the initial state
     fn reset(&mut self);
 
-    // Step the
-    fn step(&mut self, a: Self::Action, t: f32) -> Result<f32, NotAllowed<Self::Action>>;
+    // One step forward for the Markov decision process
+    fn step(&mut self, a: Self::Action, t: f32) -> Result<f32, Box<dyn Error>>;
 
     // Indicate if the MDP is at the terminal state.
     fn is_finished(&self) -> bool;
@@ -49,13 +53,22 @@ pub trait Agent<T>
 where
     T: MarkovDecisionProcess,
 {
-    fn policy(&self, s: &T) -> T::Action;
-    fn play_game(&self, e: &mut T) -> Result<f32, NotAllowed<T::Action>> {
-        let mut reward = 0.0;
+    fn policy(&self, s: &T) -> Result<T::Action, Box<dyn Error>>;
+    fn play_game(&self, e: &mut T) -> Result<f32, Box<dyn Error>> {
+        let mut total_reward = 0.0;
         while !e.is_finished() {
-            let a = self.policy(e);
-            reward += e.step(a, 0.1)?;
+            let a = self.policy(e)?;
+            total_reward += e.step(a, 0.1)?;
         }
-        Ok(reward)
+        Ok(total_reward)
+    }
+    fn evaluate(&self, e: &mut T, nb_games: Option<u32>) -> Result<f32, Box<dyn Error>> {
+        let n = nb_games.unwrap_or(1_000);
+        let mut res = 0.0;
+        for _ in 1..n {
+            e.reset();
+            res += self.play_game(e)?;
+        }
+        Ok(res)
     }
 }

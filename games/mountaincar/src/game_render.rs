@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::ops::{Add, Div};
-
+use crate::aibrain::{load_tensor, SimpleMap};
 use crate::despawn_screen;
+use crate::mdp::Agent;
 use crate::mdp::MarkovDecisionProcess;
 use crate::mountaincar::{MountainAction, MountainCar};
 use crate::wrapper_bezier::Wrapper;
@@ -13,13 +11,12 @@ use bevy::{
     math::cubic_splines::CubicCurve, math::vec2, prelude::*, render::mesh::PrimitiveTopology,
     sprite::MaterialMesh2dBundle,
 };
-use candle_core::{Device, Error, Tensor};
-use rfd::FileDialog;
+use std::ops::{Add, Div};
 use uilib::{GameMode, GameState};
 
 pub struct GamePlugin;
 
-const PADDING: f32 = 22.0;
+const PADDING: f32 = 13.0;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
@@ -41,7 +38,7 @@ impl Plugin for GamePlugin {
                 move_car_ia
                     .run_if(in_state(GameState::Playing))
                     .run_if(in_state(GameMode::AI))
-                    .run_if(resource_exists::<AIBrain>),
+                    .run_if(resource_exists::<SimpleMap>),
                 (
                     timer_text_update_system,
                     state_text_update_system,
@@ -60,71 +57,6 @@ impl Plugin for GamePlugin {
             ),
         );
     }
-}
-
-#[derive(Resource)]
-struct AIBrain {
-    q_left: Tensor,
-    q_nothing: Tensor,
-    q_right: Tensor,
-}
-
-impl AIBrain {
-    fn decision(&self, x: f32, v: f32) -> Result<MountainAction, Error> {
-        let i = x.div_euclid(0.05).clamp(0.0, 9.0) as usize;
-        let j = 9 - v.add(0.15).div_euclid(0.03).clamp(0.0, 9.0) as usize;
-        let q_l = self.q_left.get(i)?.get(j)?.to_scalar::<f64>()?;
-        let q_n = self.q_nothing.get(i)?.get(j)?.to_scalar::<f64>()?;
-        let q_r = self.q_right.get(i)?.get(j)?.to_scalar::<f64>()?;
-        if q_l >= q_n && q_l >= q_r {
-            Ok(MountainAction::Left)
-        } else if q_r >= q_n && q_r >= q_l {
-            Ok(MountainAction::Right)
-        } else {
-            Ok(MountainAction::DoNothing)
-        }
-    }
-}
-
-impl TryFrom<&mut HashMap<String, Tensor>> for AIBrain {
-    type Error = &'static str;
-
-    fn try_from(h: &mut HashMap<String, Tensor>) -> Result<Self, Self::Error> {
-        let Some(q1) = h.remove("q_left") else {
-            return Err("Q_left not in");
-        };
-        let Some(q2) = h.remove("q_nothing") else {
-            return Err("Q_nothing not in");
-        };
-        let Some(q3) = h.remove("q_right") else {
-            return Err("Q_right not in");
-        };
-        Ok(AIBrain {
-            q_left: q1,
-            q_nothing: q2,
-            q_right: q3,
-        })
-    }
-}
-
-fn load_tensor(mut commands: Commands) {
-    let device = Device::cuda_if_available(0).unwrap_or(Device::Cpu);
-    let Some(file) = FileDialog::new()
-        .add_filter("Safetensor file", &["safetensors"])
-        .pick_file()
-    else {
-        error!("Fail");
-        return;
-    };
-    let Ok(mut h) = candle_core::safetensors::load(file, &device) else {
-        error!("Invalid file");
-        return;
-    };
-    let Ok(brain) = AIBrain::try_from(&mut h) else {
-        error!("Invalid");
-        return;
-    };
-    commands.insert_resource(brain);
 }
 
 #[derive(Debug, Clone)]
@@ -163,9 +95,14 @@ impl From<TriangleStrip> for Mesh {
 impl CubicTransform for Transform {
     fn from_cubic_curve(c: &CubicCurve<Vec2>, pos: f32, z_coordinate: f32) -> Transform {
         let p = c.position(pos);
-        let dp = c.velocity(pos).normalize();
-        Transform::from_xyz(p.x - PADDING * dp.y, p.y + PADDING * dp.x, z_coordinate)
-            .with_rotation(Quat::from_rotation_z(f32::atan(dp.y / dp.x)))
+        let dp = c.velocity(pos);
+        let lambda = dp.distance(Vec2::ZERO);
+        Transform::from_xyz(
+            p.x - PADDING * dp.y / lambda.powf(0.9),
+            p.y + PADDING * dp.x / lambda.powf(0.9),
+            z_coordinate,
+        )
+        .with_rotation(Quat::from_rotation_z(f32::atan(dp.y / dp.x)))
     }
 }
 
@@ -187,13 +124,22 @@ struct Decor;
 struct GameTimer(Timer);
 
 fn setup_resources(mut commands: Commands) {
-    let control_points = [[
-        vec2(-WIDTH.div_euclid(2.0), -80.0), // 0.0
-        vec2(450.0, -1200.0),                // -1120.0
-        vec2(630.0, 260.0),                  // 340.0
-        vec2(WIDTH.div_euclid(2.0), -60.0),  // -30.0
-    ]];
+    let control_points = [
+        [
+            vec2(-WIDTH.div_euclid(2.0), -83.0), // 0.0
+            vec2(-77.0, -645.0),                 // -1120.0
+            vec2(311.0, -539.0),                 // 340.0
+            vec2(515.0, -326.0),                 // -30.0
+        ],
+        [
+            vec2(515.0, -326.0),                 // 0.0
+            vec2(703.0, -130.0),                 // -1120.0
+            vec2(714.0, -76.0),                  // 340.0
+            vec2(WIDTH.div_euclid(2.0), -133.0), // -30.0
+        ],
+    ];
 
+    //let bezier = CubicBezier::new(control_points).to_curve();
     let bezier = CubicBezier::new(control_points).to_curve();
 
     commands.insert_resource(Wrapper {
@@ -210,8 +156,8 @@ fn setup_decor(
     mut materials: ResMut<Assets<ColorMaterial>>,
     wrap: Res<Wrapper>,
 ) {
-    // Spawn the flag
-    let p = wrap.m.ground.position(0.92);
+    // Spawn the ground
+    let p = wrap.m.ground.position(1.80);
     let mut triangle_strip = Vec::new();
 
     for point in wrap.m.ground.iter_positions(40) {
@@ -268,7 +214,7 @@ fn setup_text(
     wrap.m.reset();
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("car.png"),
+            texture: asset_server.load("car6.png"),
             transform: Transform::from_cubic_curve(&wrap.m.ground, 0., 2.0),
             ..default()
         },
@@ -374,16 +320,14 @@ fn move_car_ia(
     mut query: Query<&mut Transform, With<Car>>,
     mut wrap: ResMut<Wrapper>,
     time_step: Res<Time<Fixed>>,
-    brain: Res<AIBrain>,
+    brain: Res<SimpleMap>,
 ) {
     for mut t in &mut query {
         //let action = brain.decision(wrap.m.pos, wrap.m.speed).unwrap_or_default();
-        let action = brain
-            .decision(wrap.m.pos, wrap.m.speed)
-            .unwrap_or_else(|_| {
-                info!("snap!");
-                MountainAction::DoNothing
-            });
+        let action = brain.policy(&wrap.m).unwrap_or_else(|_| {
+            info!("snap!");
+            MountainAction::DoNothing
+        });
         wrap.m
             .step(action, time_step.timestep().as_secs_f32())
             .unwrap_or(0.0);

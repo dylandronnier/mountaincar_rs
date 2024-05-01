@@ -3,6 +3,7 @@ use std::{path::PathBuf, str::FromStr};
 use bevy::prelude::*;
 use uilib::{GameMode, GameState, IconPath, MenuPlugin, SplashPlugin};
 
+mod aibrain;
 mod game_render;
 mod mdp;
 mod mountaincar;

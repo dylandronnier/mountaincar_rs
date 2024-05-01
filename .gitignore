@@ -4,3 +4,5 @@
 *.svg
 *.jpeg
 *.jpg
+*.nvim
+*.vim

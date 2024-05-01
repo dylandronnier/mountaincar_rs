@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::{convert::TryFrom, error::Error};
 
 use crate::mdp;
 use candle_core::Tensor;
@@ -31,14 +31,14 @@ pub enum MountainAction {
     DoNothing = 0,
 }
 
-pub const MOTOR_POWER: f32 = 0.1;
+pub const MOTOR_POWER: f32 = 0.07;
 pub const FRICTION: f32 = 0.2;
 pub const GRAVITY: f32 = 0.15;
 
 impl<T: Ground> MountainCar<T> {
     pub fn new(g: T) -> Self {
         MountainCar {
-            pos: rand::thread_rng().gen_range(0.45..0.5),
+            pos: rand::thread_rng().gen_range(0.5..0.6),
             speed: 0.0,
             ground: g,
         }
@@ -49,16 +49,12 @@ impl<T: Ground> mdp::MarkovDecisionProcess for MountainCar<T> {
     type Action = MountainAction;
 
     fn reset(&mut self) {
-        self.pos = rand::thread_rng().gen_range(0.25..0.3);
+        self.pos = rand::thread_rng().gen_range(0.5..0.6);
     }
     fn is_finished(&self) -> bool {
-        self.pos > 0.9
+        self.pos > 1.77
     }
-    fn step(
-        &mut self,
-        a: Self::Action,
-        time_step: f32,
-    ) -> Result<f32, mdp::NotAllowed<Self::Action>> {
+    fn step(&mut self, a: Self::Action, time_step: f32) -> Result<f32, Box<dyn Error>> {
         let slope = self.ground.slope(self.pos);
         self.speed +=
             time_step * (a as i8 as f32 * MOTOR_POWER - slope * GRAVITY - self.speed * FRICTION);
