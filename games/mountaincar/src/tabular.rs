@@ -1,12 +1,11 @@
 use candle_core::Tensor;
-use rl::Agent;
+use rl::{Agent, FileLoader};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::ops::Add;
 
-use crate::aibrain::EncodedAgent;
-use crate::mountaincar::{self, MountainAction, MountainCar};
+use crate::mountaincar::{self, Ground, MountainAction, MountainCar};
 
 pub struct Tabular {
     q_left: Tensor,
@@ -52,4 +51,4 @@ impl TryFrom<&mut HashMap<String, Tensor>> for Tabular {
     }
 }
 
-impl EncodedAgent for Tabular {}
+impl<T: Ground> FileLoader<MountainCar<T>> for Tabular {}

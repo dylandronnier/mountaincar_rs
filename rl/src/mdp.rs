@@ -4,7 +4,8 @@ use std::{
     u32,
 };
 
-use candle_core::Tensor;
+use candle_core::{Device, Tensor};
+use std::{collections::HashMap, convert::TryFrom, path::PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct NotAllowed<A>
@@ -68,5 +69,22 @@ where
             res += self.play_game(e, time_step)?;
         }
         Ok(res)
+    }
+}
+
+pub trait FileLoader<T: MarkovDecisionProcess>:
+    Agent<T> + for<'a> TryFrom<&'a mut HashMap<String, Tensor>>
+{
+    fn from_file(file: PathBuf) -> Result<Self, ()> {
+        // Select the device. Try GPU and pick CPU if not found.
+        let device = Device::cuda_if_available(0).unwrap_or(Device::Cpu);
+
+        let Ok(mut h) = candle_core::safetensors::load(file, &device) else {
+            return Err(());
+        };
+        let Ok(brain) = Self::try_from(&mut h) else {
+            return Err(());
+        };
+        Ok(brain)
     }
 }

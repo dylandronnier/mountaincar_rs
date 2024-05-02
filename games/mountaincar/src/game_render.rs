@@ -1,4 +1,4 @@
-use crate::aibrain::{EncodedAgent, NeuralNet};
+use crate::aibrain::NeuralNet;
 use crate::despawn_screen;
 use crate::mlp::MultiLayerPerceptron;
 use crate::mountaincar::{MountainAction, MountainCar};
@@ -11,6 +11,7 @@ use bevy::{
     math::cubic_splines::CubicCurve, math::vec2, prelude::*, render::mesh::PrimitiveTopology,
     sprite::MaterialMesh2dBundle,
 };
+use rl::FileLoader;
 use rl::MarkovDecisionProcess;
 
 use rfd::FileDialog;
@@ -314,12 +315,15 @@ fn load_brain(mut commands: Commands, b: Res<BrainType>) {
         return;
     };
 
-    let Ok(nn) = (match *b {
-        BrainType::Tab => Tabular::load_tensor(file),
-        BrainType::Mlp => <MultiLayerPerceptron<2, 3>>::load_tensor(file),
-    }) else {
-        error!("Aïe !");
-        return;
+    let nn: NeuralNet = match *b {
+        BrainType::Tab => <Tabular as FileLoader<MountainCar<CubicCurve<Vec2>>>>::from_file(file)
+            .unwrap()
+            .into(),
+        BrainType::Mlp => <MultiLayerPerceptron<2, 3> as FileLoader<
+            MountainCar<CubicCurve<Vec2>>,
+        >>::from_file(file)
+        .unwrap()
+        .into(),
     };
 
     commands.insert_resource(nn);

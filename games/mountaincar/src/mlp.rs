@@ -1,6 +1,6 @@
 use candle_core::{safetensors, Module, Tensor};
 use itertools::Itertools;
-use rl::{Agent, MarkovDecisionProcess};
+use rl::{Agent, FileLoader, MarkovDecisionProcess};
 use std::convert::TryFrom;
 use std::error::Error;
 use std::iter::FromIterator;
@@ -8,8 +8,7 @@ use std::path::Path;
 use std::usize;
 use std::{collections::HashMap, u32};
 
-use crate::aibrain::EncodedAgent;
-use crate::mountaincar::{self, MountainAction, MountainCar};
+use crate::mountaincar::{self, Ground, MountainAction, MountainCar};
 
 pub struct MultiLayerPerceptron<const I: usize, const O: usize> {
     pub layers: Vec<candle_nn::Linear>,
@@ -102,4 +101,4 @@ impl<const I: usize, const O: usize> TryFrom<&mut HashMap<String, Tensor>>
     }
 }
 
-impl EncodedAgent for MultiLayerPerceptron<2, 3> {}
+impl<G: Ground> FileLoader<MountainCar<G>> for MultiLayerPerceptron<2, 3> {}
