@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use rl::MarkovDecisionProcess;
+use rl::{Agent, MarkovDecisionProcess};
 mod menu;
 mod splash;
 
@@ -20,15 +20,24 @@ pub enum GameState {
 pub use menu::MenuPlugin;
 pub use splash::{IconPath, SplashPlugin};
 
-pub trait Render<T>
-where
-    T: MarkovDecisionProcess,
-{
-    type Plugin: Plugin;
+pub fn default_plugin(app: &mut App) {
+    app.init_state::<GameState>()
+        .insert_state(GameMode::Human)
+        .add_systems(Startup, setup);
 }
 
-fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
+pub fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
     for entity in &to_despawn {
         commands.entity(entity).despawn_recursive();
     }
+}
+
+fn setup(mut commands: Commands) {
+    // Spawn 2D Camera
+    commands.spawn(Camera2dBundle::default());
+}
+
+#[derive(Resource)]
+pub struct AIResource<T: MarkovDecisionProcess> {
+    pub nn: Box<dyn Agent<T> + Send + Sync>,
 }

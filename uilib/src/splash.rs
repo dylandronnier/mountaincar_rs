@@ -7,23 +7,34 @@ use super::{despawn_screen, GameState};
 #[derive(Resource)]
 pub struct IconPath(pub PathBuf);
 
-pub struct SplashPlugin;
+#[derive(Default)]
+pub struct SplashPlugin {
+    pub path_logo: Option<PathBuf>,
+    pub color: Color,
+    pub duration: f32,
+}
 
 impl Plugin for SplashPlugin {
     // This plugin will display a splash screen with Bevy logo for 1 second before switching to the menu
     fn build(&self, app: &mut App) {
+        if let Some(pb) = self.path_logo.clone() {
+            app.insert_resource(IconPath(pb));
+        }
         // As this plugin is managing the splash screen, it will focus on the state `GameState::Splash`
-        app
-            // When entering the state, spawn everything needed for this screen
-            .insert_resource(SplashTimer(Timer::from_seconds(5.0, TimerMode::Once)))
-            .add_systems(
-                OnEnter(GameState::Splash),
-                logo_display.run_if(resource_added::<IconPath>),
-            )
-            // While in this state, run the `countdown` system
-            .add_systems(Update, countdown.run_if(in_state(GameState::Splash)))
-            // When exiting the state, despawn everything that was spawned for this screen
-            .add_systems(OnExit(GameState::Splash), despawn_screen::<OnSplashScreen>);
+        app.insert_resource(SplashTimer(Timer::from_seconds(
+            self.duration,
+            TimerMode::Once,
+        )))
+        .insert_resource(ClearColor(self.color))
+        // When entering the state, spawn everything needed for this screen
+        .add_systems(
+            OnEnter(GameState::Splash),
+            logo_display.run_if(resource_added::<IconPath>),
+        )
+        // While in this state, run the `countdown` system
+        .add_systems(Update, countdown.run_if(in_state(GameState::Splash)))
+        // When exiting the state, despawn everything that was spawned for this screen
+        .add_systems(OnExit(GameState::Splash), despawn_screen::<OnSplashScreen>);
     }
 }
 

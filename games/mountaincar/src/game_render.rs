@@ -1,67 +1,58 @@
-use crate::aibrain::NeuralNet;
-use crate::despawn_screen;
-use crate::mlp::MultiLayerPerceptron;
+use crate::aibrain::*;
 use crate::mountaincar::{MountainAction, MountainCar};
-use crate::tabular::Tabular;
 use crate::wrapper_bezier::Wrapper;
 use crate::{HEIGHT, WIDTH};
 use bevy::reflect::List;
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::{
-    math::cubic_splines::CubicCurve, math::vec2, prelude::*, render::mesh::PrimitiveTopology,
+    math::cubic_splines::CubicCurve, prelude::*, render::mesh::PrimitiveTopology,
     sprite::MaterialMesh2dBundle,
 };
-use rl::FileLoader;
 use rl::MarkovDecisionProcess;
 
-use rfd::FileDialog;
 use std::ops::{Add, Div};
-use uilib::{GameMode, GameState};
-
-pub struct GamePlugin;
+use uilib::{despawn_screen, AIResource, GameMode, GameState};
 
 const PADDING: f32 = 13.0;
 
-impl Plugin for GamePlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<BrainType>()
-            .add_systems(
-                OnEnter(GameState::Playing),
+pub fn mountain_car_plugin(app: &mut App) {
+    app.init_resource::<BrainType>()
+        .add_systems(
+            OnEnter(GameState::Playing),
+            (
+                setup_resources,
+                setup_decor.after(setup_resources),
+                setup_text.after(setup_resources),
+            ),
+        )
+        .add_systems(OnEnter(GameMode::AI), load_brain)
+        .add_systems(
+            FixedUpdate,
+            (
+                move_car_human
+                    .run_if(in_state(GameState::Playing))
+                    .run_if(in_state(GameMode::Human)),
+                move_car_ia
+                    .run_if(in_state(GameState::Playing))
+                    .run_if(in_state(GameMode::AI))
+                    .run_if(resource_exists::<AIResource<MountainCar<CubicCurve<Vec2>>>>),
                 (
-                    setup_resources,
-                    setup_decor.after(setup_resources),
-                    setup_text.after(setup_resources),
-                ),
-            )
-            .add_systems(OnEnter(GameMode::AI), load_brain)
-            .add_systems(
-                FixedUpdate,
-                (
-                    move_car_human
-                        .run_if(in_state(GameState::Playing))
-                        .run_if(in_state(GameMode::Human)),
-                    move_car_ia
-                        .run_if(in_state(GameState::Playing))
-                        .run_if(in_state(GameMode::AI))
-                        .run_if(resource_exists::<NeuralNet>),
-                    (
-                        timer_text_update_system,
-                        state_text_update_system,
-                        end_of_game,
-                    )
-                        .run_if(in_state(GameState::Playing)),
-                ),
-            )
-            .add_systems(
-                OnExit(GameState::Playing),
-                (
-                    despawn_screen::<StateText>,
-                    despawn_screen::<TimeText>,
-                    despawn_screen::<Car>,
-                    despawn_screen::<Decor>,
-                ),
-            );
-    }
+                    timer_text_update_system,
+                    state_text_update_system,
+                    end_of_game,
+                )
+                    .run_if(in_state(GameState::Playing)),
+            ),
+        )
+        .add_systems(
+            OnExit(GameState::Playing),
+            (
+                despawn_screen::<StateText>,
+                despawn_screen::<TimeText>,
+                despawn_screen::<Car>,
+                despawn_screen::<Decor>,
+            ),
+        );
 }
 
 #[derive(Debug, Clone)]
@@ -123,43 +114,6 @@ struct Car;
 
 #[derive(Component)]
 struct Decor;
-
-// Resource timer
-#[derive(Resource)]
-struct GameTimer(Timer);
-
-#[derive(Resource, Default)]
-enum BrainType {
-    #[default]
-    Tab,
-    Mlp,
-}
-
-fn setup_resources(mut commands: Commands) {
-    let control_points = [
-        [
-            vec2(-WIDTH.div_euclid(2.0), -83.0), // 0.0
-            vec2(-77.0, -645.0),                 // -1120.0
-            vec2(311.0, -539.0),                 // 340.0
-            vec2(515.0, -326.0),                 // -30.0
-        ],
-        [
-            vec2(515.0, -326.0),                 // 0.0
-            vec2(703.0, -130.0),                 // -1120.0
-            vec2(714.0, -76.0),                  // 340.0
-            vec2(WIDTH.div_euclid(2.0), -133.0), // -30.0
-        ],
-    ];
-
-    //let bezier = CubicBezier::new(control_points).to_curve();
-    let bezier = CubicBezier::new(control_points).to_curve();
-
-    commands.insert_resource(Wrapper {
-        m: MountainCar::new(bezier),
-    });
-    commands.insert_resource(<Time<Fixed>>::from_seconds(1.0 / 50.0));
-    commands.insert_resource(GameTimer(Timer::from_seconds(30.0, TimerMode::Once)));
-}
 
 fn setup_decor(
     mut commands: Commands,
@@ -305,30 +259,6 @@ fn setup_text(
     timer.0.reset();
 }
 
-fn load_brain(mut commands: Commands, b: Res<BrainType>) {
-    // Picking the file storing the brain
-    let Some(file) = FileDialog::new()
-        .add_filter("Safetensor file", &["safetensors"])
-        .pick_file()
-    else {
-        error!("No file picked");
-        return;
-    };
-
-    let nn: NeuralNet = match *b {
-        BrainType::Tab => <Tabular as FileLoader<MountainCar<CubicCurve<Vec2>>>>::from_file(file)
-            .unwrap()
-            .into(),
-        BrainType::Mlp => <MultiLayerPerceptron<2, 3> as FileLoader<
-            MountainCar<CubicCurve<Vec2>>,
-        >>::from_file(file)
-        .unwrap()
-        .into(),
-    };
-
-    commands.insert_resource(nn);
-}
-
 fn move_car_human(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<&mut Transform, With<Car>>,
@@ -356,7 +286,7 @@ fn move_car_ia(
     mut query: Query<&mut Transform, With<Car>>,
     mut wrap: ResMut<Wrapper>,
     time_step: Res<Time<Fixed>>,
-    brain: Res<NeuralNet>,
+    brain: Res<AIResource<MountainCar<CubicCurve<Vec2>>>>,
 ) {
     for mut t in &mut query {
         let action = brain.nn.policy(&wrap.m).unwrap_or_else(|_| {
