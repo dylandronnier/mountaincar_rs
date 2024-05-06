@@ -37,6 +37,7 @@ fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 }
 
+// Agent as a resource
 #[derive(Resource)]
 pub struct AIResource<T: MarkovDecisionProcess> {
     pub nn: Box<dyn Agent<T> + Send + Sync>,

@@ -15,11 +15,6 @@ const HEIGHT: f32 = 1080.0;
 const WIDTH: f32 = 1620.0;
 
 fn main() {
-    let sp = SplashPlugin {
-        duration: 5.0,
-        color: Color::rgb(0.0, 0.0, 0.0),
-        path_logo: PathBuf::from_str("branding/logo.jpg").ok(),
-    };
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -32,8 +27,15 @@ fn main() {
         }))
         .add_plugins((
             default_plugin,
-            sp,
+            // Splash screen configuration
+            SplashPlugin {
+                duration: 5.0,
+                color: Color::rgb(0.0, 0.0, 0.0),
+                path_logo: PathBuf::from_str("branding/logo.jpg").ok(),
+            },
+            // Menu configuration
             MenuPlugin,
+            // Main game rendering
             game_render::mountain_car_plugin,
         ))
         .run()
