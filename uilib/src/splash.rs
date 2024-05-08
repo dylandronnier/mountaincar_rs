@@ -1,16 +1,21 @@
+use super::{despawn_screen, GameState};
+use bevy::prelude::*;
 use std::path::PathBuf;
 
-use bevy::prelude::*;
-
-use super::{despawn_screen, GameState};
-
+/// Path of the icon displayed on the splash screen as a resource to the game.²
 #[derive(Resource)]
 pub struct IconPath(pub PathBuf);
 
+/// Struct implementing the Plugin trait. Differents configuration can be used.
 #[derive(Default)]
 pub struct SplashPlugin {
+    /// Path of the logo displayed on the screen.
     pub path_logo: Option<PathBuf>,
+
+    /// Color of the background.
     pub color: Color,
+
+    /// Time that prints the splash screen.
     pub duration: f32,
 }
 

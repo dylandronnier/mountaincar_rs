@@ -1,52 +1,38 @@
-use std::{
-    error::Error,
-    fmt::{self, Debug, Display},
-    u32,
-};
+#![warn(missing_docs)]
+#![doc = include_str!("../README.md")]
 
 use candle_core::{Device, Tensor};
-use std::{collections::HashMap, convert::TryFrom, path::PathBuf};
+use std::{collections::HashMap, convert::TryFrom, error::Error, fmt::Debug, path::PathBuf, u32};
 
-#[derive(Debug, Clone)]
-pub struct NotAllowed<A>
-where
-    A: Debug,
-{
-    pub a: A,
-}
-
-impl<A> fmt::Display for NotAllowed<A>
-where
-    A: Display + Debug,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Action {} is not allowed in the current state.", self.a)
-    }
-}
-
-// A trait for Markov Decision processes
+/// A trait for implementing Markov Decision processes.
 pub trait MarkovDecisionProcess {
-    // Action type
+    /// Action type.
     type Action: Debug + PartialEq;
 
-    // Reset the MDP to the initial state
+    /// Reset the MDP to its initial state.
     fn reset(&mut self);
 
-    // One step forward for the Markov decision process
-    fn step(&mut self, a: Self::Action, t: f32) -> Result<f32, Box<dyn Error>>;
+    /// Take one step forward for the Markov decision process. As the function simulates a
+    /// continuous dynamics, the time step is alsso given as an argument of the function.
+    fn step(&mut self, action: Self::Action, time_step: f32) -> Result<f32, Box<dyn Error>>;
 
-    // Indicate if the MDP is at the terminal state.
+    /// Indicate if the MDP has reached the terminal state.
     fn is_finished(&self) -> bool;
 
-    // The feature
+    /// Return the current set of the MDP as a feature tensor.
     fn feature(&self) -> Tensor;
 }
 
+/// Agent trait for implementing AI that plays a game.
 pub trait Agent<T>
 where
     T: MarkovDecisionProcess,
 {
+    /// The only function to define for implementing the trait. Take action given the state of a
+    /// Markov decision state.
     fn policy(&self, s: &T) -> Result<T::Action, Box<dyn Error>>;
+
+    /// Play the game until the end and return the total reward.
     fn play_game(&self, e: &mut T, time_step: Option<f32>) -> Result<f32, Box<dyn Error>> {
         let mut total_reward = 0.0;
         let time_step = time_step.unwrap_or(0.1);
@@ -56,6 +42,8 @@ where
         }
         Ok(total_reward)
     }
+
+    /// Monte-Carlo evaluation of the performance of the agent.
     fn evaluate(
         &self,
         e: &mut T,
@@ -72,9 +60,11 @@ where
     }
 }
 
+/// Sub-trait that implements agentss loading from safetensors file.
 pub trait FileLoader<T: MarkovDecisionProcess>:
     Agent<T> + for<'a> TryFrom<&'a mut HashMap<String, Tensor>>
 {
+    /// Function that implements the loading of file.
     fn from_file(file: PathBuf) -> Result<Self, ()> {
         // Select the device. Try GPU and pick CPU if not found.
         let device = Device::cuda_if_available(0).unwrap_or(Device::Cpu);
