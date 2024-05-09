@@ -54,10 +54,10 @@ impl<T: Ground> MarkovDecisionProcess for MountainCar<T> {
     fn is_finished(&self) -> bool {
         self.pos > 1.77
     }
-    fn step(&mut self, a: Self::Action, time_step: f32) -> Result<f32, Box<dyn Error>> {
+    fn step(&mut self, action: Self::Action, time_step: f32) -> Result<f32, Box<dyn Error>> {
         let slope = self.ground.slope(self.pos);
-        self.speed +=
-            time_step * (a as i8 as f32 * MOTOR_POWER - slope * GRAVITY - self.speed * FRICTION);
+        self.speed += time_step
+            * (action as i8 as f32 * MOTOR_POWER - slope * GRAVITY - self.speed * FRICTION);
         self.pos += time_step * self.speed * self.ground.derivivative(self.pos);
         Ok(-1.0) // Reward -1 at each step
     }

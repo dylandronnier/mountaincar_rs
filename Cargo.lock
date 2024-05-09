@@ -3324,6 +3324,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "ring_pong"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "candle-core",
+ "candle-nn",
+ "image 0.25.1",
+ "itertools",
+ "rand",
+ "rfd",
+ "rl",
+ "uilib",
+]
+
+[[package]]
 name = "rl"
 version = "0.1.0"
 dependencies = [
