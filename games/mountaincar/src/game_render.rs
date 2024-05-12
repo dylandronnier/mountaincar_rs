@@ -11,7 +11,7 @@ use bevy::{
 use rl::MarkovDecisionProcess;
 
 use std::ops::{Add, Div};
-use uilib::{despawn_screen, AIResource, GameMode, GameState};
+use uilib::{despawn_screen, remove_brain, AIResource, GameMode, GameState};
 
 const PADDING: f32 = 13.0;
 
@@ -51,7 +51,7 @@ pub fn mountain_car_plugin(app: &mut App) {
                 despawn_screen::<TimeText>,
                 despawn_screen::<Car>,
                 despawn_screen::<Decor>,
-                remove_brain.run_if(in_state(GameMode::AI)),
+                remove_brain::<MountainCar<CubicCurve<Vec2>>>.run_if(in_state(GameMode::AI)),
             ),
         );
 }
@@ -59,11 +59,6 @@ pub fn mountain_car_plugin(app: &mut App) {
 #[derive(Debug, Clone)]
 pub struct TriangleStrip {
     pub points: Vec<Vec3>,
-}
-
-pub fn remove_brain(mut commands: Commands, mut game_mode: ResMut<NextState<GameMode>>) {
-    commands.remove_resource::<AIResource<MountainCar<CubicCurve<Vec2>>>>();
-    game_mode.set(GameMode::Human)
 }
 
 pub trait CubicTransform {

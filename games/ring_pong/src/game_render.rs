@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use crate::ringpong::{RingPong, RingPongAction, RADIUS, THETA};
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use rl::MarkovDecisionProcess;
-use uilib::{despawn_screen, AIResource, GameMode, GameState};
+use uilib::{despawn_screen, remove_brain, AIResource, GameMode, GameState};
 
 // We set the z-value of the ball to 1 so it renders on top in the case of overlapping sprites.
 const BALL_DIAMETER: f32 = 30.;
@@ -46,14 +46,9 @@ pub fn mountain_car_plugin(app: &mut App) {
             despawn_screen::<TimeText>,
             despawn_screen::<Paddle>,
             despawn_screen::<Ball>,
-            remove_brain.run_if(in_state(GameMode::AI)),
+            remove_brain::<RingPong>.run_if(in_state(GameMode::AI)),
         ),
     );
-}
-
-pub fn remove_brain(mut commands: Commands, mut game_mode: ResMut<NextState<GameMode>>) {
-    commands.remove_resource::<AIResource<RingPong>>();
-    game_mode.set(GameMode::Human)
 }
 
 // A unit struct to help identify the timer UI component, since there may be many Text components

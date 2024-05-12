@@ -57,3 +57,12 @@ pub struct AIResource<T: MarkovDecisionProcess> {
     /// Smart pointer to the actual agent.
     pub nn: Box<dyn Agent<T> + Send + Sync>,
 }
+
+/// Remove the neural net fro resources and switch to Human Game mode.
+pub fn remove_brain<T: MarkovDecisionProcess + 'static>(
+    mut commands: Commands,
+    mut game_mode: ResMut<NextState<GameMode>>,
+) {
+    commands.remove_resource::<AIResource<T>>();
+    game_mode.set(GameMode::Human)
+}
