@@ -1,16 +1,14 @@
 [package]
-name = "ring_pong"
+name = "mountaincar_render"
 version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-uilib = { path = "../../uilib" }
-rl = { path = "../../rl" }
-candle-core = "^0.4"
-candle-nn = "^0.4"
+uilib = { path = "../../../uilib" }
+rl = { path = "../../../rl" }
+mountaincar_mods = { path = "../models" }
+mountaincar_env = { path = "../environment" }
 image = "^0.25"
-itertools = "^0.12"
-rand = "^0.8"
 rfd = {version = "0.14", features = ["gtk3"], default-features = false}
 
 [dependencies.bevy]

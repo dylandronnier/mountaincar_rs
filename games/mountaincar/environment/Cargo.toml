@@ -1,0 +1,15 @@
+[package]
+name = "mountaincar_env"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "mountaincar_env"
+path = "src/mountaincar.rs"
+
+[dependencies]
+candle-core = "^0.4"
+rl = { path = "../../../rl" }
+rand = "^0.8"

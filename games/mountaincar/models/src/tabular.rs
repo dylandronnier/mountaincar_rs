@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 use std::error::Error;
 use std::ops::Add;
 
-use crate::mountaincar::{self, Ground, MountainAction, MountainCar};
+use mountaincar_env::{self, Ground, MountainAction, MountainCar};
 
 pub struct Tabular {
     q_left: Tensor,
@@ -13,7 +13,7 @@ pub struct Tabular {
     q_right: Tensor,
 }
 
-impl<T: mountaincar::Ground> Agent<MountainCar<T>> for Tabular {
+impl<T: Ground> Agent<MountainCar<T>> for Tabular {
     fn policy(&self, e: &MountainCar<T>) -> Result<MountainAction, Box<dyn Error>> {
         let i = e.pos.div_euclid(0.05).clamp(0.0, 9.0) as usize;
         let j = 9 - e.speed.add(0.15).div_euclid(0.03).clamp(0.0, 9.0) as usize;

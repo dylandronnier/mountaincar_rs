@@ -1,0 +1,23 @@
+[package]
+name = "ringpong_env"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "ringpong_env"
+path = "src/ringpong.rs"
+
+[dependencies]
+candle-core = "^0.4"
+rl = { path = "../../../rl" }
+rand = "^0.8"
+
+[dependencies.bevy]
+version = "^0.13"
+default-features = false 
+
+[target.'cfg(target_os = "linux")'.dependencies.bevy]
+version = "^0.13"
+default-features = false 

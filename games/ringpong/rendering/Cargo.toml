@@ -1,0 +1,21 @@
+[package]
+name = "ringpong_render"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+uilib = { path = "../../../uilib" }
+rl = { path = "../../../rl" }
+ringpong_env = { path = "../environment" }
+candle-core = "^0.4"
+candle-nn = "^0.4"
+
+[dependencies.bevy]
+version = "^0.13"
+default-features = false 
+features = ["bevy_text", "bevy_winit", "bevy_ui", "bevy_pbr", "default_font"]
+
+[target.'cfg(target_os = "linux")'.dependencies.bevy]
+version = "^0.13"
+default-features = false 
+features = ["wayland"]

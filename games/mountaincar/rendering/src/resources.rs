@@ -1,15 +1,12 @@
-use crate::mlp::MultiLayerPerceptron;
-use crate::mountaincar::MountainCar;
-use crate::tabular::Tabular;
-use crate::wrapper_bezier::Wrapper;
+use crate::wrapper_bezier::{RockyRoad, Wrapper};
 use crate::WIDTH;
-use bevy::{
-    math::{cubic_splines::CubicCurve, vec2},
-    prelude::*,
-};
+use bevy::{math::vec2, prelude::*};
+use mountaincar_env::MountainCar;
+use mountaincar_mods::mlp::MultiLayerPerceptron;
+use mountaincar_mods::tabular::Tabular;
 use rfd::FileDialog;
 use rl::FileLoader;
-use uilib::AIResource;
+use uilib::{AIResource, GameMode, GameState};
 
 // Resource timer
 #[derive(Resource)]
@@ -41,42 +38,42 @@ pub fn setup_resources(mut commands: Commands) {
     let bezier = CubicBezier::new(control_points).to_curve();
 
     commands.insert_resource(Wrapper {
-        m: MountainCar::new(bezier),
+        m: MountainCar::new(RockyRoad(bezier)),
     });
     commands.insert_resource(<Time<Fixed>>::from_seconds(1.0 / 50.0));
     commands.insert_resource(GameTimer(Timer::from_seconds(30.0, TimerMode::Once)));
 }
 
-pub fn load_brain(mut commands: Commands, b: Res<BrainType>) {
+pub fn load_brain(
+    mut commands: Commands,
+    b: Res<BrainType>,
+    mut game_state: ResMut<NextState<GameState>>,
+    mut game_mode: ResMut<NextState<GameMode>>,
+) {
     // Picking the file storing the brain
     let Some(file) = FileDialog::new()
         .add_filter("Safetensor file", &["safetensors"])
         .pick_file()
     else {
-        error!("No file picked");
+        info!("No file picked. Return to main menu.");
+        game_state.set(GameState::Menu);
+        game_mode.set(GameMode::Human);
         return;
     };
 
-    let nn: AIResource<MountainCar<CubicCurve<Vec2>>> =
-        match *b {
-            BrainType::Tab => AIResource {
-                nn: Box::from(
-                    <Tabular as FileLoader<MountainCar<CubicCurve<Vec2>>>>::from_file(file)
-                        .unwrap(),
-                ),
-            },
-            BrainType::Mlp => {
-                AIResource {
-                    nn:
-                        Box::from(
-                            <MultiLayerPerceptron<2, 3> as FileLoader<
-                                MountainCar<CubicCurve<Vec2>>,
-                            >>::from_file(file)
-                            .unwrap(),
-                        ),
-                }
-            }
-        };
+    let nn: AIResource<MountainCar<RockyRoad>> = match *b {
+        BrainType::Tab => AIResource {
+            nn: Box::from(
+                <Tabular as FileLoader<MountainCar<RockyRoad>>>::from_file(file).unwrap(),
+            ),
+        },
+        BrainType::Mlp => AIResource {
+            nn: Box::from(
+                <MultiLayerPerceptron<2, 3> as FileLoader<MountainCar<RockyRoad>>>::from_file(file)
+                    .unwrap(),
+            ),
+        },
+    };
 
     commands.insert_resource(nn);
 }

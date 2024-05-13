@@ -6,6 +6,6 @@
 
 [workspace]
 resolver = "2"
-members = ["games/mountaincar", "games/ring_pong", "uilib", "rl"]
+members = ["games/mountaincar/*", "games/ringpong/*", "uilib", "rl"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

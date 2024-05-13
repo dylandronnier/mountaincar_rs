@@ -8,7 +8,7 @@ use std::path::Path;
 use std::usize;
 use std::{collections::HashMap, u32};
 
-use crate::mountaincar::{self, Ground, MountainAction, MountainCar};
+use mountaincar_env::{Ground, MountainAction, MountainCar};
 
 pub struct MultiLayerPerceptron<const I: usize, const O: usize> {
     pub layers: Vec<candle_nn::Linear>,
@@ -66,7 +66,7 @@ impl<const I: usize, const O: usize> MultiLayerPerceptron<I, O> {
     }
 }
 
-impl<T: mountaincar::Ground> Agent<MountainCar<T>> for MultiLayerPerceptron<2, 3> {
+impl<T: Ground> Agent<MountainCar<T>> for MultiLayerPerceptron<2, 3> {
     fn policy(&self, e: &MountainCar<T>) -> Result<MountainAction, Box<dyn Error>> {
         let logits = self.forward(e.feature())?;
         let probs = candle_nn::ops::softmax(&logits, 1)?;

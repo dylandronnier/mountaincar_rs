@@ -1,19 +1,10 @@
-use crate::aibrain::*;
-use crate::mountaincar::{MountainAction, MountainCar};
-use crate::wrapper_bezier::Wrapper;
-use crate::{HEIGHT, WIDTH};
-use bevy::reflect::List;
-use bevy::render::render_asset::RenderAssetUsages;
-use bevy::{
-    math::cubic_splines::CubicCurve, prelude::*, render::mesh::PrimitiveTopology,
-    sprite::MaterialMesh2dBundle,
-};
+use crate::resources::*;
+use crate::wrapper_bezier::{CubicTransform, RockyRoad, TriangleStrip, Wrapper};
+use crate::HEIGHT;
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use mountaincar_env::{MountainAction, MountainCar};
 use rl::MarkovDecisionProcess;
-
-use std::ops::{Add, Div};
 use uilib::{despawn_screen, remove_brain, AIResource, GameMode, GameState};
-
-const PADDING: f32 = 13.0;
 
 pub fn mountain_car_plugin(app: &mut App) {
     app.init_resource::<BrainType>()
@@ -29,20 +20,16 @@ pub fn mountain_car_plugin(app: &mut App) {
         .add_systems(
             FixedUpdate,
             (
-                move_car_human
-                    .run_if(in_state(GameState::Playing))
-                    .run_if(in_state(GameMode::Human)),
-                move_car_ia
-                    .run_if(in_state(GameState::Playing))
+                play_human.run_if(in_state(GameMode::Human)),
+                play_ai
                     .run_if(in_state(GameMode::AI))
-                    .run_if(resource_exists::<AIResource<MountainCar<CubicCurve<Vec2>>>>),
-                (
-                    timer_text_update_system,
-                    state_text_update_system,
-                    end_of_game,
-                )
-                    .run_if(in_state(GameState::Playing)),
-            ),
+                    .run_if(resource_exists::<AIResource<MountainCar<RockyRoad>>>),
+                move_car,
+                timer_text_update_system,
+                state_text_update_system,
+                end_of_game,
+            )
+                .run_if(in_state(GameState::Playing)),
         )
         .add_systems(
             OnExit(GameState::Playing),
@@ -51,56 +38,9 @@ pub fn mountain_car_plugin(app: &mut App) {
                 despawn_screen::<TimeText>,
                 despawn_screen::<Car>,
                 despawn_screen::<Decor>,
-                remove_brain::<MountainCar<CubicCurve<Vec2>>>.run_if(in_state(GameMode::AI)),
+                remove_brain::<MountainCar<RockyRoad>>.run_if(in_state(GameMode::AI)),
             ),
         );
-}
-
-#[derive(Debug, Clone)]
-pub struct TriangleStrip {
-    pub points: Vec<Vec3>,
-}
-
-pub trait CubicTransform {
-    fn from_cubic_curve(c: &CubicCurve<Vec2>, pos: f32, z_coordinate: f32) -> Transform;
-}
-
-impl From<TriangleStrip> for Mesh {
-    fn from(line: TriangleStrip) -> Self {
-        // This tells wgpu that the positions are a list of points
-        // where a line will be drawn between each consecutive point
-        let v = Vec2::new(WIDTH, HEIGHT);
-        let mut line_points2d: Vec<Vec2> = Vec::new();
-        for p in line.points.iter() {
-            line_points2d.push(
-                <Vec3 as FromReflect>::from_reflect(p)
-                    .unwrap()
-                    .xy()
-                    .add(v.div(2.0))
-                    .div(v),
-            );
-        }
-        Mesh::new(
-            PrimitiveTopology::TriangleStrip,
-            RenderAssetUsages::RENDER_WORLD,
-        )
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, line.points)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, line_points2d)
-    }
-}
-
-impl CubicTransform for Transform {
-    fn from_cubic_curve(c: &CubicCurve<Vec2>, pos: f32, z_coordinate: f32) -> Transform {
-        let p = c.position(pos);
-        let dp = c.velocity(pos);
-        let lambda = dp.distance(Vec2::ZERO);
-        Transform::from_xyz(
-            p.x - PADDING * dp.y / lambda.powf(0.9),
-            p.y + PADDING * dp.x / lambda.powf(0.9),
-            z_coordinate,
-        )
-        .with_rotation(Quat::from_rotation_z(f32::atan(dp.y / dp.x)))
-    }
 }
 
 // A unit struct to help identify the timer UI component, since there may be many Text components
@@ -124,10 +64,10 @@ fn setup_decor(
     wrap: Res<Wrapper>,
 ) {
     // Spawn the ground
-    let p = wrap.m.ground.position(1.80);
+    let p = wrap.m.ground.0.position(1.80);
     let mut triangle_strip = Vec::new();
 
-    for point in wrap.m.ground.iter_positions(40) {
+    for point in wrap.m.ground.0.iter_positions(40) {
         triangle_strip.push(Vec3::new(point.x, -HEIGHT.div_euclid(2.0), 2.0));
         triangle_strip.push(Vec3::new(point.x, point.y, 2.0));
     }
@@ -182,7 +122,7 @@ fn setup_text(
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("car6.png"),
-            transform: Transform::from_cubic_curve(&wrap.m.ground, 0., 2.0),
+            transform: Transform::from_cubic_curve(&wrap.m.ground.0, 0., 2.0),
             ..default()
         },
         Car,
@@ -260,45 +200,42 @@ fn setup_text(
     timer.0.reset();
 }
 
-fn move_car_human(
+fn play_human(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut Transform, With<Car>>,
     mut wrap: ResMut<Wrapper>,
     time_step: Res<Time<Fixed>>,
 ) {
-    for mut t in &mut query {
-        let action = {
-            if keyboard_input.pressed(KeyCode::KeyH) {
-                MountainAction::Left
-            } else if keyboard_input.pressed(KeyCode::KeyL) {
-                MountainAction::Right
-            } else {
-                MountainAction::DoNothing
-            }
-        };
-        wrap.m
-            .step(action, time_step.timestep().as_secs_f32())
-            .unwrap_or(0.0);
-        *t = Transform::from_cubic_curve(&wrap.m.ground, wrap.m.pos, 2.0);
-    }
+    let action = {
+        if keyboard_input.pressed(KeyCode::KeyH) {
+            MountainAction::Left
+        } else if keyboard_input.pressed(KeyCode::KeyL) {
+            MountainAction::Right
+        } else {
+            MountainAction::DoNothing
+        }
+    };
+    wrap.m
+        .step(action, time_step.timestep().as_secs_f32())
+        .unwrap_or(0.0);
 }
 
-fn move_car_ia(
-    mut query: Query<&mut Transform, With<Car>>,
+fn move_car(mut query: Query<&mut Transform, With<Car>>, wrap: Res<Wrapper>) {
+    let mut t = query.single_mut();
+    *t = Transform::from_cubic_curve(&wrap.m.ground.0, wrap.m.pos, 2.0);
+}
+
+fn play_ai(
     mut wrap: ResMut<Wrapper>,
     time_step: Res<Time<Fixed>>,
-    brain: Res<AIResource<MountainCar<CubicCurve<Vec2>>>>,
+    brain: Res<AIResource<MountainCar<RockyRoad>>>,
 ) {
-    for mut t in &mut query {
-        let action = brain.nn.policy(&wrap.m).unwrap_or_else(|_| {
-            error!("AI brain could not compute the action to take!");
-            MountainAction::DoNothing
-        });
-        wrap.m
-            .step(action, time_step.timestep().as_secs_f32())
-            .unwrap_or(0.0);
-        *t = Transform::from_cubic_curve(&wrap.m.ground, wrap.m.pos, 2.0);
-    }
+    let action = brain.nn.policy(&wrap.m).unwrap_or_else(|_| {
+        error!("AI brain could not compute the action to take!");
+        MountainAction::DoNothing
+    });
+    wrap.m
+        .step(action, time_step.timestep().as_secs_f32())
+        .unwrap_or(0.0);
 }
 
 fn timer_text_update_system(mut query: Query<&mut Text, With<TimeText>>, timer: Res<GameTimer>) {

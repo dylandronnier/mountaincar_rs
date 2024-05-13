@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
-use crate::ringpong::{RingPong, RingPongAction, RADIUS, THETA};
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use ringpong_env::{RingPong, RingPongAction, RADIUS, THETA};
 use rl::MarkovDecisionProcess;
 use uilib::{despawn_screen, remove_brain, AIResource, GameMode, GameState};
 
