@@ -1,16 +1,16 @@
 use super::{despawn_screen, GameState};
 use bevy::prelude::*;
-use std::path::PathBuf;
+use std::path::Path;
 
 /// Path of the icon displayed on the splash screen as a resource to the game.²
 #[derive(Resource)]
-pub struct IconPath(pub PathBuf);
+pub struct IconPath(pub &'static Path);
 
 /// Struct implementing the Plugin trait. Differents configuration can be used.
 #[derive(Default)]
 pub struct SplashPlugin {
     /// Path of the logo displayed on the screen.
-    pub path_logo: Option<PathBuf>,
+    pub path_logo: Option<&'static Path>,
 
     /// Color of the background.
     pub color: Color,
@@ -22,7 +22,7 @@ pub struct SplashPlugin {
 impl Plugin for SplashPlugin {
     // This plugin will display a splash screen with Bevy logo for 1 second before switching to the menu
     fn build(&self, app: &mut App) {
-        if let Some(pb) = self.path_logo.clone() {
+        if let Some(pb) = self.path_logo {
             app.insert_resource(IconPath(pb));
         }
         // As this plugin is managing the splash screen, it will focus on the state `GameState::Splash`
@@ -52,7 +52,7 @@ struct OnSplashScreen;
 struct SplashTimer(Timer);
 
 fn logo_display(mut commands: Commands, asset_server: Res<AssetServer>, ico: Res<IconPath>) {
-    let icon = asset_server.load(ico.0.clone());
+    let icon = asset_server.load(ico.0);
     // Display the logo
     commands
         .spawn((

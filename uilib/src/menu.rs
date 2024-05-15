@@ -2,7 +2,10 @@ use crate::{despawn_screen, GameMode, GameState};
 use bevy::asset::embedded_asset;
 use bevy::{app::AppExit, prelude::*};
 
-pub struct MenuPlugin;
+pub struct MenuPlugin {
+    pub title: &'static str,
+    pub button_colors: ButtonColors,
+}
 
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
@@ -10,7 +13,8 @@ impl Plugin for MenuPlugin {
         bevy::asset::embedded_asset!(app, "buttons/exit.png");
         bevy::asset::embedded_asset!(app, "buttons/deep-learning.png");
 
-        app
+        app.insert_resource(self.button_colors)
+            .insert_resource(MenuTitle(self.title))
             // At start, the menu is not enabled. This will be changed in `menu_setup` when
             // entering the `GameState::Menu` state.
             // Current screen in the menu is handled by an independent state from `GameState`
@@ -34,10 +38,16 @@ enum MenuButtonAction {
     Quit,
 }
 
-const NORMAL_BUTTON: Color = Color::rgb(0.60, 0.50, 0.65);
-const HOVERED_BUTTON: Color = Color::rgb(0.75, 0.60, 0.85);
-const HOVERED_PRESSED_BUTTON: Color = Color::rgb(0.25, 0.65, 0.25);
-const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+#[derive(Resource, Clone, Copy)]
+pub struct ButtonColors {
+    pub normal: Color,
+    pub howered: Color,
+    pub howered_pressed: Color,
+    pub pressed: Color,
+}
+
+#[derive(Resource)]
+pub struct MenuTitle(&'static str);
 
 // Tag component used to mark which setting is currently selected
 #[derive(Component)]
@@ -51,18 +61,26 @@ fn button_system(
         (&Interaction, &mut BackgroundColor, Option<&SelectedOption>),
         Modified,
     >,
+    button_colors: Res<ButtonColors>,
 ) {
     for (interaction, mut color, selected) in &mut interaction_query {
         *color = match (*interaction, selected) {
-            (Interaction::Pressed, _) | (Interaction::None, Some(_)) => PRESSED_BUTTON.into(),
-            (Interaction::Hovered, Some(_)) => HOVERED_PRESSED_BUTTON.into(),
-            (Interaction::Hovered, None) => HOVERED_BUTTON.into(),
-            (Interaction::None, None) => NORMAL_BUTTON.into(),
+            (Interaction::Pressed, _) | (Interaction::None, Some(_)) => {
+                button_colors.pressed.into()
+            }
+            (Interaction::Hovered, Some(_)) => button_colors.howered_pressed.into(),
+            (Interaction::Hovered, None) => button_colors.howered.into(),
+            (Interaction::None, None) => button_colors.normal.into(),
         }
     }
 }
 
-fn menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn menu_setup(
+    mut commands: Commands,
+    button_colors: Res<ButtonColors>,
+    menu_title: Res<MenuTitle>,
+    asset_server: Res<AssetServer>,
+) {
     // Common style for all buttons on the screen
     let button_style = Style {
         width: Val::Px(250.0),
@@ -115,7 +133,7 @@ fn menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     // Display the game name
                     parent.spawn(
                         TextBundle::from_section(
-                            "Mountain Car",
+                            menu_title.0,
                             TextStyle {
                                 font_size: 80.0,
                                 color: Color::WHITE,
@@ -135,7 +153,7 @@ fn menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .spawn((
                             ButtonBundle {
                                 style: button_style.clone(),
-                                background_color: NORMAL_BUTTON.into(),
+                                background_color: button_colors.normal.into(),
                                 ..default()
                             },
                             MenuButtonAction::Play,
@@ -154,7 +172,7 @@ fn menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .spawn((
                             ButtonBundle {
                                 style: button_style.clone(),
-                                background_color: NORMAL_BUTTON.into(),
+                                background_color: button_colors.normal.into(),
                                 ..default()
                             },
                             MenuButtonAction::Aiplay,
@@ -177,7 +195,7 @@ fn menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                         .spawn((
                             ButtonBundle {
                                 style: button_style,
-                                background_color: NORMAL_BUTTON.into(),
+                                background_color: button_colors.normal.into(),
                                 ..default()
                             },
                             MenuButtonAction::Quit,

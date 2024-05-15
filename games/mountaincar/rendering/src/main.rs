@@ -1,7 +1,7 @@
-use std::{path::PathBuf, str::FromStr};
+use std::path::Path;
 
 use bevy::prelude::*;
-use uilib::{default_plugin, MenuPlugin, SplashPlugin};
+use uilib::{default_plugin, ButtonColors, MenuPlugin, SplashPlugin};
 
 mod gamerender;
 mod resources;
@@ -28,10 +28,18 @@ fn main() {
             SplashPlugin {
                 duration: 5.0,
                 color: Color::rgb(0.0, 0.0, 0.0),
-                path_logo: PathBuf::from_str("branding/logo.jpg").ok(),
+                path_logo: Some(Path::new("branding/logo.jpg")),
             },
             // Menu configuration
-            MenuPlugin,
+            MenuPlugin {
+                title: "Mountain Car",
+                button_colors: ButtonColors {
+                    normal: Color::rgb(0.60, 0.50, 0.65),
+                    howered: Color::rgb(0.75, 0.60, 0.85),
+                    howered_pressed: Color::rgb(0.25, 0.65, 0.25),
+                    pressed: Color::rgb(0.35, 0.75, 0.35),
+                },
+            },
             // Main game rendering
             gamerender::mountain_car_plugin,
         ))
