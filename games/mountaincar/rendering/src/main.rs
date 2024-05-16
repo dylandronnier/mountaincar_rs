@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use bevy::prelude::*;
-use uilib::{default_plugin, ButtonColors, MenuPlugin, SplashPlugin};
+use uilib::{default_plugin, ButtonColors, Customization, MenuPlugin, SplashPlugin};
 
 mod gamerender;
 mod resources;
@@ -33,11 +33,15 @@ fn main() {
             // Menu configuration
             MenuPlugin {
                 title: "Mountain Car",
-                button_colors: ButtonColors {
-                    normal: Color::rgb(0.60, 0.50, 0.65),
-                    howered: Color::rgb(0.75, 0.60, 0.85),
-                    howered_pressed: Color::rgb(0.25, 0.65, 0.25),
-                    pressed: Color::rgb(0.35, 0.75, 0.35),
+                colors: Customization {
+                    background: Color::DARK_GREEN,
+                    buttons: ButtonColors {
+                        normal: Color::rgb(0.60, 0.50, 0.65),
+                        howered: Color::rgb(0.75, 0.60, 0.85),
+                        howered_pressed: Color::rgb(0.25, 0.65, 0.25),
+                        pressed: Color::rgb(0.35, 0.75, 0.35),
+                    },
+                    square: Color::TOMATO,
                 },
             },
             // Main game rendering

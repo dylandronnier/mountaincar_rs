@@ -2,8 +2,7 @@
 //! Hello
 //!
 use bevy::prelude::*;
-pub use menu::ButtonColors;
-pub use menu::MenuPlugin;
+pub use menu::{ButtonColors, Customization, MenuPlugin};
 use rl::{Agent, MarkovDecisionProcess};
 pub use splash::{IconPath, SplashPlugin};
 

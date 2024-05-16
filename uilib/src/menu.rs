@@ -4,7 +4,7 @@ use bevy::{app::AppExit, prelude::*};
 
 pub struct MenuPlugin {
     pub title: &'static str,
-    pub button_colors: ButtonColors,
+    pub colors: Customization,
 }
 
 impl Plugin for MenuPlugin {
@@ -13,7 +13,7 @@ impl Plugin for MenuPlugin {
         bevy::asset::embedded_asset!(app, "buttons/exit.png");
         bevy::asset::embedded_asset!(app, "buttons/deep-learning.png");
 
-        app.insert_resource(self.button_colors)
+        app.insert_resource(self.colors)
             .insert_resource(MenuTitle(self.title))
             // At start, the menu is not enabled. This will be changed in `menu_setup` when
             // entering the `GameState::Menu` state.
@@ -38,12 +38,19 @@ enum MenuButtonAction {
     Quit,
 }
 
-#[derive(Resource, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct ButtonColors {
     pub normal: Color,
     pub howered: Color,
     pub howered_pressed: Color,
     pub pressed: Color,
+}
+
+#[derive(Resource, Clone, Copy)]
+pub struct Customization {
+    pub background: Color,
+    pub buttons: ButtonColors,
+    pub square: Color,
 }
 
 #[derive(Resource)]
@@ -61,26 +68,27 @@ fn button_system(
         (&Interaction, &mut BackgroundColor, Option<&SelectedOption>),
         Modified,
     >,
-    button_colors: Res<ButtonColors>,
+    colors: Res<Customization>,
 ) {
     for (interaction, mut color, selected) in &mut interaction_query {
         *color = match (*interaction, selected) {
             (Interaction::Pressed, _) | (Interaction::None, Some(_)) => {
-                button_colors.pressed.into()
+                colors.buttons.pressed.into()
             }
-            (Interaction::Hovered, Some(_)) => button_colors.howered_pressed.into(),
-            (Interaction::Hovered, None) => button_colors.howered.into(),
-            (Interaction::None, None) => button_colors.normal.into(),
+            (Interaction::Hovered, Some(_)) => colors.buttons.howered_pressed.into(),
+            (Interaction::Hovered, None) => colors.buttons.howered.into(),
+            (Interaction::None, None) => colors.buttons.normal.into(),
         }
     }
 }
 
 fn menu_setup(
     mut commands: Commands,
-    button_colors: Res<ButtonColors>,
+    colors: Res<Customization>,
     menu_title: Res<MenuTitle>,
     asset_server: Res<AssetServer>,
 ) {
+    commands.insert_resource(ClearColor(colors.background));
     // Common style for all buttons on the screen
     let button_style = Style {
         width: Val::Px(250.0),
@@ -126,7 +134,7 @@ fn menu_setup(
                         align_items: AlignItems::Center,
                         ..default()
                     },
-                    background_color: Color::MIDNIGHT_BLUE.into(),
+                    background_color: colors.square.into(),
                     ..default()
                 })
                 .with_children(|parent| {
@@ -153,7 +161,7 @@ fn menu_setup(
                         .spawn((
                             ButtonBundle {
                                 style: button_style.clone(),
-                                background_color: button_colors.normal.into(),
+                                background_color: colors.buttons.normal.into(),
                                 ..default()
                             },
                             MenuButtonAction::Play,
@@ -172,7 +180,7 @@ fn menu_setup(
                         .spawn((
                             ButtonBundle {
                                 style: button_style.clone(),
-                                background_color: button_colors.normal.into(),
+                                background_color: colors.buttons.normal.into(),
                                 ..default()
                             },
                             MenuButtonAction::Aiplay,
@@ -195,7 +203,7 @@ fn menu_setup(
                         .spawn((
                             ButtonBundle {
                                 style: button_style,
-                                background_color: button_colors.normal.into(),
+                                background_color: colors.buttons.normal.into(),
                                 ..default()
                             },
                             MenuButtonAction::Quit,
