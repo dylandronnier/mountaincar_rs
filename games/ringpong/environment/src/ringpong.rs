@@ -3,7 +3,7 @@ use std::{convert::TryFrom, error::Error, f32::consts::PI};
 use bevy::math::Vec2;
 use candle_core::Tensor;
 use rand::Rng;
-use rl::MarkovDecisionProcess;
+use rl::mdp::MarkovDecisionProcess;
 
 // "Ring Pong" decision process
 
@@ -31,6 +31,16 @@ impl RingPong {
         RingPong {
             ball_pos: Vec2::new(0.0, 0.0),
             ball_speed: Vec2::new(v_x, f32::sqrt(1.0 - v_x.powi(2))),
+            paddle_angle: 0.0,
+        }
+    }
+}
+
+impl Default for RingPong {
+    fn default() -> Self {
+        RingPong {
+            ball_pos: Vec2::new(0.0, 0.0),
+            ball_speed: Vec2::new(1.0, 0.0),
             paddle_angle: 0.0,
         }
     }

@@ -2,7 +2,7 @@ use std::{convert::TryFrom, error::Error};
 
 use candle_core::Tensor;
 use rand::Rng;
-use rl::MarkovDecisionProcess;
+use rl::mdp::MarkovDecisionProcess;
 
 pub trait Ground: Send + Sync {
     // The slope of the curve at the given point

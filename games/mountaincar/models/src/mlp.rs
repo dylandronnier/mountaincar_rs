@@ -1,6 +1,8 @@
-use candle_core::{safetensors, Module, Tensor};
+use candle_core::{safetensors, DType, Device, Module, Tensor};
+use candle_nn::{Optimizer, VarBuilder, VarMap};
 use itertools::Itertools;
-use rl::{Agent, FileLoader, MarkovDecisionProcess};
+use rl::ai::{Agent, FileLoader};
+use rl::mdp::MarkovDecisionProcess;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::iter::FromIterator;
@@ -44,15 +46,6 @@ impl<const I: usize, const O: usize> MultiLayerPerceptron<I, O> {
         Ok(nn)
     }
 
-    pub fn forward(&self, xs: candle_core::Tensor) -> candle_core::error::Result<Tensor> {
-        let n = self.layers.len();
-        let logits = self.layers[..n - 1]
-            .iter()
-            .try_fold(xs, |acc, l| l.forward(&acc)?.relu())?;
-        let logits = self.layers[n - 1].forward(&logits)?;
-        Ok(logits)
-    }
-
     pub fn save<P: AsRef<Path>>(&self, p: P) -> candle_core::error::Result<()> {
         safetensors::save(
             &HashMap::from_iter(
@@ -66,9 +59,20 @@ impl<const I: usize, const O: usize> MultiLayerPerceptron<I, O> {
     }
 }
 
+impl<const I: usize, const O: usize> Module for MultiLayerPerceptron<I, O> {
+    fn forward(&self, xs: &candle_core::Tensor) -> candle_core::error::Result<Tensor> {
+        let n = self.layers.len();
+        let logits = self.layers[..n - 1]
+            .iter()
+            .try_fold(xs.to_owned(), |acc, l| l.forward(&acc)?.relu())?;
+        let logits = self.layers[n - 1].forward(&logits)?;
+        Ok(logits)
+    }
+}
+
 impl<T: Ground> Agent<MountainCar<T>> for MultiLayerPerceptron<2, 3> {
     fn policy(&self, e: &MountainCar<T>) -> Result<MountainAction, Box<dyn Error>> {
-        let logits = self.forward(e.feature())?;
+        let logits = self.forward(&e.feature())?;
         let probs = candle_nn::ops::softmax(&logits, 1)?;
         let i_max = probs.argmax(0)?.to_scalar::<u32>()?;
         if i_max == 0 {
@@ -102,3 +106,18 @@ impl<const I: usize, const O: usize> TryFrom<&mut HashMap<String, Tensor>>
 }
 
 impl<G: Ground> FileLoader<MountainCar<G>> for MultiLayerPerceptron<2, 3> {}
+
+// Training
+// fn train(dev: &Device) -> Result<MultiLayerPerceptron<2, 3>, ()> {
+//     let varmap = VarMap::new();
+//     let vs = VarBuilder::from_varmap(&varmap, DType::F32, dev);
+//     let model = MultiLayerPerceptron::<2, 3>::new(vs.clone(), &[4, 8, 4]).unwrap();
+//     let mut sgd = candle_nn::optim::SGD::new(varmap.all_vars(), 0.01).unwrap();
+//     for epoch in 1..1_000 {
+//         let logits = model.forward(&train_votes).unwrap();
+//         let log_sm = candle_nn::ops::log_softmax(&logits, D::Minus1)?;
+//         let loss = candle_nn::loss::nll(&log_sm, &train_results).unwrap();
+//         sgd.backward_step(&loss).unwrap();
+//     }
+//     Ok(model)
+// }

@@ -3,7 +3,7 @@
 //!
 use bevy::prelude::*;
 pub use menu::{ButtonColors, Customization, MenuPlugin};
-use rl::{Agent, MarkovDecisionProcess};
+use rl::{ai::Agent, mdp::MarkovDecisionProcess};
 pub use splash::{IconPath, SplashPlugin};
 
 mod menu;

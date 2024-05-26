@@ -1,11 +1,9 @@
-# [package]
-# name = "mountaincar_rs"
-# version = "0.1.0"
-# edition = "2021"
-# author = "Dylan Dronnier <dylan.dronnier@posteo.net>"
-
 [workspace]
 resolver = "2"
 members = ["games/mountaincar/*", "games/ringpong/*", "uilib", "rl"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace.package]
+version = "0.1.0"
+authors = ["Dylan Dronnier <dylan.dronnier@posteo.net>"]
+description = "Playing dumb games with AI."
+license = "MIT"

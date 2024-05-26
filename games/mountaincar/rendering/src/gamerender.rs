@@ -3,7 +3,7 @@ use crate::wrapper_bezier::{CubicTransform, RockyRoad, TriangleStrip, Wrapper};
 use crate::HEIGHT;
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use mountaincar_env::{MountainAction, MountainCar};
-use rl::MarkovDecisionProcess;
+use rl::mdp::MarkovDecisionProcess;
 use uilib::{despawn_screen, remove_brain, AIResource, GameMode, GameState};
 
 pub fn mountain_car_plugin(app: &mut App) {

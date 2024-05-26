@@ -14,8 +14,7 @@ rfd = {version = "0.14", features = ["gtk3"], default-features = false}
 [dependencies.bevy]
 version = "^0.13"
 default-features = false 
-features = ["png", "bevy_gizmos", "bevy_text", "bevy_winit", "bevy_asset",
-  "bevy_ui", "bevy_pbr", "default_font"]
+features = ["png", "bevy_gizmos", "bevy_text", "bevy_winit", "bevy_asset", "default_font"]
 
 [target.'cfg(target_os = "linux")'.dependencies.bevy]
 version = "^0.13"

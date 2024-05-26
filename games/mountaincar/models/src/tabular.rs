@@ -1,5 +1,5 @@
 use candle_core::Tensor;
-use rl::{Agent, FileLoader};
+use rl::ai::{Agent, FileLoader};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::error::Error;

@@ -5,7 +5,7 @@ use mountaincar_env::MountainCar;
 use mountaincar_mods::mlp::MultiLayerPerceptron;
 use mountaincar_mods::tabular::Tabular;
 use rfd::FileDialog;
-use rl::FileLoader;
+use rl::ai::FileLoader;
 use uilib::{AIResource, GameMode, GameState};
 
 // Resource timer

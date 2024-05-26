@@ -13,7 +13,7 @@ candle-nn = "^0.4"
 [dependencies.bevy]
 version = "^0.13"
 default-features = false 
-features = ["bevy_text", "bevy_winit", "bevy_ui", "bevy_pbr", "default_font"]
+features = ["bevy_winit", "bevy_core_pipeline"]
 
 [target.'cfg(target_os = "linux")'.dependencies.bevy]
 version = "^0.13"

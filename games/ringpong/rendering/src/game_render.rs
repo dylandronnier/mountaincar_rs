@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use ringpong_env::{RingPong, RingPongAction, RADIUS, THETA};
-use rl::MarkovDecisionProcess;
+use rl::mdp::MarkovDecisionProcess;
 use uilib::{despawn_screen, remove_brain, AIResource, GameMode, GameState};
 
 // We set the z-value of the ball to 1 so it renders on top in the case of overlapping sprites.
